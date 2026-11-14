@@ -209,3 +209,71 @@ def test_bad_messages_are_ignored():
                 await pub(a, "ok.test", {"v": 1})
                 assert (await recv(a))["data"] == {"v": 1}
     run(main())
+
+
+def test_renderer_endpoints_keep_account_key_private_and_require_same_origin(monkeypatch):
+    from server.hub import restyle
+    monkeypatch.setenv('GENRATOR_RESTYLE_PROVIDER', 'decart')
+    monkeypatch.setenv('DECART_API_KEY', 'account-secret')
+    calls = []
+
+    async def mint(origin):
+        calls.append(origin)
+        return 200, {'apiKey': 'short-lived-token'}
+
+    monkeypatch.setattr(restyle, 'mint_token', mint)
+
+    async def main():
+        async with Running() as h:
+            root = f'http://127.0.0.1:{h.hub.port}'
+
+            def get(path, headers=None):
+                req = urllib.request.Request(root + path, headers=headers or {})
+                try:
+                    with urllib.request.urlopen(req) as r:
+                        return r.status, dict(r.headers), r.read()
+                except urllib.error.HTTPError as e:
+                    return e.code, dict(e.headers), e.read()
+
+            status, headers, body = await asyncio.to_thread(get, '/api/restyle/config')
+            assert status == 200 and json.loads(body)['RESTYLE_PROVIDER'] == 'decart'
+            assert b'account-secret' not in body and b'API_KEY' not in body
+            assert headers['Cache-Control'] == 'no-store'
+            for headers in ({}, {'X-Genrator-Restyle': '1', 'Origin': 'https://evil.example'},
+                            {'X-Genrator-Restyle': '1', 'Sec-Fetch-Site': 'cross-site'}):
+                status, _, _ = await asyncio.to_thread(get, '/api/restyle/token', headers)
+                assert status == 403
+            assert calls == []
+            status, headers, body = await asyncio.to_thread(
+                get, '/api/restyle/token', {'X-Genrator-Restyle': '1', 'Origin': root})
+            assert status == 200 and json.loads(body)['apiKey'] == 'short-lived-token'
+            assert headers['Cache-Control'] == 'no-store' and calls == [root]
+            assert b'account-secret' not in body
+    run(main())
+
+
+def test_decART_token_restricts_model_origin_and_redacts_provider_errors(monkeypatch):
+    from server.hub import restyle
+    from io import BytesIO
+    monkeypatch.setenv('DECART_API_KEY', 'account-secret')
+    monkeypatch.setenv('GENRATOR_DECART_MODEL', 'lucy-restyle-2')
+
+    def urlopen(request, timeout):
+        assert request.full_url == 'https://api.decart.ai/v1/client/tokens'
+        assert request.get_header('X-api-key') == 'account-secret'
+        assert json.loads(request.data) == {'expiresIn': 300, 'allowedModels': ['lucy-restyle-2'],
+                                            'allowedOrigins': ['https://laptop:8765']}
+        return BytesIO(b'{"apiKey":"ephemeral","expiresAt":"soon","private":"account-secret"}')
+
+    monkeypatch.setattr(restyle.urllib.request, 'urlopen', urlopen)
+    status, data = run(restyle.mint_token('https://laptop:8765'))
+    assert status == 200 and data == {'apiKey': 'ephemeral', 'expiresAt': 'soon'}
+
+    def fail(*args, **kw):
+        raise urllib.error.HTTPError('https://api.decart.ai', 401, 'account-secret', {}, None)
+
+    monkeypatch.setattr(restyle.urllib.request, 'urlopen', fail)
+    status, data = run(restyle.mint_token('https://laptop:8765'))
+    assert status == 502 and '401' in data['error'] and 'account-secret' not in str(data)
+    monkeypatch.delenv('DECART_API_KEY')
+    assert run(restyle.mint_token('https://laptop:8765'))[0] == 503

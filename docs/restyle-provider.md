@@ -52,10 +52,22 @@ feed at 960×540.
 - **Backup: Daydream**, if Decart's lag or cost is a problem. It needs a second adapter in
   `restyler.js` (one new entry in `PROVIDERS`).
 - **Always available: the `fake` provider.** It tints the raw feed by prompt keywords, needs no network,
-  and is the default until a key is set. The raw fallback (T33) sits on top of whichever provider runs.
+  and is the default until Decart is enabled locally. The raw fallback (T33) sits on top of whichever provider runs.
 
-Switching provider is one line: `PROVIDER` at the top of `web/eye/restyler.js`, or `RESTYLE_PROVIDER` in
-the shared config.
+To enable actual rendering, add `DECART_API_KEY` and `GENRATOR_RESTYLE_PROVIDER=decart` to the
+ignored repository `.env`, restart the launcher, then refresh the Eye page. Use `--no-music` to keep
+the Kingdom theme while transforming the live phone feed. The server serves nonsecret provider/model
+settings at `/api/restyle/config`; `/shared/config.json` never contains credentials.
+
+The Eye page requests a five-minute token immediately before each connection or reconnect through
+`/api/restyle/token`. The hub keeps the permanent key server-side, restricts tokens to the selected
+model and requesting origin, requires a same-origin custom-header request, and marks responses
+`no-store`. The local hub is intended for a trusted LAN. The Eye status shows connection failures
+while keeping the raw camera usable. Set `GENRATOR_RESTYLE_PROVIDER=fake` for offline tint preview.
+The browser SDK is pinned to `@decartai/sdk@0.2.14`. Override the model with `GENRATOR_DECART_MODEL`;
+default `lucy-restyle-2`. Incoming phone frames are copied into an owned canvas stream at the
+model’s width, height and frame rate, preserving the full image with letterboxing. The SDK never owns
+the original phone camera track.
 
 ## Exact calls the adapter makes (Decart)
 
@@ -64,7 +76,14 @@ From docs.platform.decart.ai (JavaScript realtime SDK and the video-restyling pa
 ```js
 import { createDecartClient, models } from "@decartai/sdk";   // the adapter loads it from esm.sh
 
-const client = createDecartClient({ apiKey, telemetry: false });
+const client = createDecartClient({
+  apiKeyProvider: async () => {
+    const r = await fetch("/api/restyle/token", {headers: {"X-Genrator-Restyle": "1"}, cache: "no-store"});
+    if (!r.ok) throw new Error("Renderer token unavailable");
+    return (await r.json()).apiKey;
+  },
+  telemetry: false,
+});
 const rt = await client.realtime.connect(phoneStream, {
   model: models.realtime("lucy-restyle-2"),
   onRemoteStream: (styled) => { video.srcObject = styled; },
@@ -80,14 +99,12 @@ Notes and open questions:
 
 - `enhance: false` keeps our composed prompts literal. With `enhance: true` (the default) Decart rewrites
   them, which may look nicer but drifts from our world.
-- **Keys:** the adapter reads `sessionStorage["genrator.restyle.key.decart"]` and otherwise asks once
-  with a page prompt. For anything beyond the demo laptop, mint short-lived client tokens server-side
-  (`client.tokens.create({expiresIn})`) and use `apiKeyProvider` instead of a static key.
+- **Keys:** the hub mints restricted short-lived client tokens; the browser uses `apiKeyProvider` to refresh credentials before connecting or reconnecting. Never place the permanent key in shared config or browser storage.
 - **Model id:** the restyling page uses `lucy-restyle-2`. Check that our account has it. It can be
-  overridden with `DECART_MODEL` in config.
+  overridden with `GENRATOR_DECART_MODEL` in the local environment.
 - **Stats fields:** the adapter reads `latency.medianMs` / `medianMs` from the `stats` event as a best
   guess. Check the real payload in the spike page console and fix the field name if it differs.
-- **SDK version:** `DECART_SDK_URL` in `restyler.js` is unpinned. Pin it to the version we tested.
+- **SDK version:** `DECART_SDK_URL` is pinned to `@decartai/sdk@0.2.14`.
 - **Weights for T30:** Decart takes one prompt, so prompt blending stays textual (4 steps), which T30
   already does.
 

@@ -5,14 +5,14 @@
 // Switching provider is this one line (or set RESTYLE_PROVIDER in config):
 export const PROVIDER = "fake"; // "fake" | "decart"
 //
-// Provider keys never live in the repo: they come from sessionStorage, or a prompt on the page.
+// The permanent provider key stays on the hub; the browser requests short-lived tokens.
 
 const STALL_MS = 1500;
 const CHECK_MS = 250;
 const STATUS_EVERY_MS = 500;
 
 // Decart realtime SDK (see docs/restyle-provider.md). Pin a version once the spike settles it.
-const DECART_SDK_URL = "https://esm.sh/@decartai/sdk";
+const DECART_SDK_URL = "https://esm.sh/@decartai/sdk@0.2.14";
 const DECART_MODEL = "lucy-restyle-2";
 
 // ---------------------------------------------------------------------------------------------
@@ -40,13 +40,17 @@ export function tintForPrompt(text = "") {
 }
 
 /** Browser surface: plays the input in a hidden <video>, draws tinted frames into a canvas. */
-function canvasSurface() {
-  let video, canvas, raf, vfc, running = false;
+function canvasSurface({ width, height, fps = 30, neutral = false } = {}) {
+  let video, canvas, output, raf, vfc, running = false, generation = 0;
   return {
     async start(stream, onFrame, getTint) {
+      const own = ++generation;
       video = Object.assign(document.createElement("video"), { muted: true, playsInline: true, srcObject: stream });
       await video.play().catch(() => {});
+      if (own !== generation) throw new Error("Renderer stopped");
       canvas = document.createElement("canvas");
+      canvas.width = width ?? video.videoWidth ?? 640;
+      canvas.height = height ?? video.videoHeight ?? 360;
       const ctx = canvas.getContext("2d");
       running = true;
       let lastTime = -1;
@@ -57,10 +61,12 @@ function canvasSurface() {
         // feed shows up as ok:false instead of a frozen picture that looks healthy.
         if (w && h && video.currentTime !== lastTime) {
           lastTime = video.currentTime;
-          if (canvas.width !== w) { canvas.width = w; canvas.height = h; }
+          if (!width && (canvas.width !== w || canvas.height !== h)) { canvas.width = w; canvas.height = h; }
           const { rgb, strength, dark } = getTint();
-          ctx.filter = `saturate(1.25) contrast(1.1)${dark ? " brightness(0.7)" : ""}`;
-          ctx.drawImage(video, 0, 0, w, h);
+          ctx.filter = neutral ? "none" : `saturate(1.25) contrast(1.1)${dark ? " brightness(0.7)" : ""}`;
+          const scale = Math.min(canvas.width / w, canvas.height / h);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(video, (canvas.width - w * scale) / 2, (canvas.height - h * scale) / 2, w * scale, h * scale);
           ctx.filter = "none";
           if (strength > 0) {
             ctx.globalCompositeOperation = "color";
@@ -79,13 +85,16 @@ function canvasSurface() {
         else raf = requestAnimationFrame(draw);
       };
       schedule();
-      return canvas.captureStream(30);
+      output = canvas.captureStream(fps);
+      return output;
     },
     stop() {
+      generation++;
       running = false;
       if (raf) cancelAnimationFrame(raf);
       if (vfc && video?.cancelVideoFrameCallback) video.cancelVideoFrameCallback(vfc);
       if (video) video.srcObject = null;
+      output?.getTracks().forEach((track) => track.stop());
     },
   };
 }
@@ -105,17 +114,13 @@ function fakeProvider(config, deps, emitFrame) {
 // ---------------------------------------------------------------------------------------------
 // Decart realtime restyling (WebRTC). API per docs.platform.decart.ai, read 2026-11.
 
-function readKey(provider, deps) {
-  const storage = deps.sessionStorage ?? globalThis.sessionStorage;
-  const slot = `genrator.restyle.key.${provider}`;
-  let key = null;
-  try { key = storage?.getItem(slot); } catch { /* storage blocked */ }
-  if (!key && typeof globalThis.prompt === "function") {
-    key = globalThis.prompt(`API key for ${provider} (kept in this tab only):`) || null;
-    try { if (key) storage?.setItem(slot, key); } catch { /* ignore */ }
-  }
-  if (!key) throw new Error(`no ${provider} API key`);
-  return key;
+export async function fetchDecartToken(fetcher = globalThis.fetch) {
+  const response = await fetcher("/api/restyle/token", {
+    headers: { "X-Genrator-Restyle": "1" }, cache: "no-store",
+  });
+  const data = await response.json();
+  if (!response.ok || !data.apiKey) throw new Error(data.error || "Decart token unavailable");
+  return data.apiKey;
 }
 
 /** Calls onFrame for every frame the stream renders (used to watch remote providers). */
@@ -133,40 +138,70 @@ function watchFrames(stream, onFrame) {
 }
 
 function decartProvider(config, deps, emitFrame) {
-  let client = null, unwatch = null, prompt = "", latency = null;
+  let session = null, prompt = "";
+  const cleanup = (own) => {
+    if (!own) return;
+    own.cancelled = true;
+    own.reject?.(new Error("Renderer stopped"));
+    own.unwatch?.(); own.unwatch = null;
+    try { own.client?.disconnect(); } catch { /* ignore */ }
+    own.client = null;
+    own.surface?.stop(); own.surface = null;
+  };
+  const active = (own) => session === own && !own.cancelled;
   return {
     name: "decart",
     async start(stream) {
-      const apiKey = readKey("decart", deps);
-      const { createDecartClient, models } = await import(DECART_SDK_URL);
-      const decart = createDecartClient({ apiKey, telemetry: false });
-      let resolveOut;
-      const out = new Promise((r) => { resolveOut = r; });
-      client = await decart.realtime.connect(stream, {
-        model: models.realtime(config.DECART_MODEL ?? DECART_MODEL),
-        onRemoteStream: (remote) => {
-          unwatch?.();
-          unwatch = watchFrames(remote, () => emitFrame(latency));
-          resolveOut(remote);
-        },
-        // enhance:false keeps our composed prompts literal, so the style stays predictable.
-        initialState: { prompt: { text: prompt || "a painterly fantasy world", enhance: false } },
-      });
-      client.on?.("stats", (s) => {
-        const ms = s?.latency?.medianMs ?? s?.medianMs ?? s?.glassToGlass?.medianMs;
-        if (Number.isFinite(ms)) latency = Math.round(ms);
-      });
-      client.on?.("error", (e) => console.warn("[restyler/decart]", e?.code, e?.message));
-      return out;
+      const own = { cancelled: false, latency: null };
+      session = own;
+      try {
+        const { createDecartClient, models } = await (deps.loadDecartSdk?.() ?? import(DECART_SDK_URL));
+        if (!active(own)) throw new Error("Renderer stopped");
+        const model = models.realtime(config.DECART_MODEL ?? DECART_MODEL);
+        const fps = typeof model.fps === "number" ? model.fps : model.fps?.ideal ?? model.fps?.max ?? 30;
+        own.surface = (deps.makeDecartSurface ?? canvasSurface)({ width: model.width, height: model.height, fps, neutral: true });
+        const input = await own.surface.start(stream, () => {}, () => ({ rgb: [0, 0, 0], strength: 0, dark: false }));
+        if (!active(own)) throw new Error("Renderer stopped");
+        const decart = createDecartClient({
+          apiKeyProvider: () => fetchDecartToken(deps.fetch ?? globalThis.fetch), telemetry: false,
+        });
+        let resolveOut;
+        const out = new Promise((resolve, reject) => { resolveOut = resolve; own.reject = reject; });
+        // A connect failure may happen before we reach `await out`.
+        out.catch(() => {});
+        own.client = await decart.realtime.connect(input, {
+          model,
+          onRemoteStream: (remote) => {
+            if (!active(own)) return;
+            own.unwatch?.();
+            own.unwatch = (deps.watchFrames ?? watchFrames)(remote, () => {
+              if (active(own)) emitFrame(own.latency);
+            });
+            resolveOut(remote);
+          },
+          initialState: { prompt: { text: prompt || "a painterly fantasy world", enhance: false } },
+        });
+        if (!active(own)) throw new Error("Renderer stopped");
+        own.client.on?.("stats", (stats) => {
+          const ms = stats?.latency?.medianMs ?? stats?.medianMs ?? stats?.glassToGlass?.medianMs;
+          if (Number.isFinite(ms)) own.latency = Math.round(ms);
+        });
+        own.client.on?.("error", (e) => console.warn("[restyler/decart]", e?.code));
+        return await out;
+      } catch (error) {
+        cleanup(own);
+        if (session === own) session = null;
+        throw error;
+      }
     },
     setPrompt(text) {
       prompt = text;
-      if (client) Promise.resolve(client.setPrompt(text, { enhance: false })).catch((e) => console.warn("[restyler/decart] setPrompt", e));
+      if (session?.client) Promise.resolve(session.client.setPrompt(text, { enhance: false }))
+        .catch(() => console.warn("[restyler/decart] prompt update failed"));
     },
     stop() {
-      unwatch?.();
-      try { client?.disconnect(); } catch { /* ignore */ }
-      client = null;
+      cleanup(session);
+      session = null;
     },
   };
 }
@@ -177,7 +212,7 @@ export const PROVIDERS = { fake: fakeProvider, decart: decartProvider };
 
 /**
  * @param {object} config  shared config (C10); RESTYLE_PROVIDER overrides PROVIDER
- * @param {object} [deps]  test seams: now, setInterval, clearInterval, makeSurface, sessionStorage
+ * @param {object} [deps]  test seams: now, setInterval, clearInterval, makeSurface, loadDecartSdk, makeDecartSurface
  */
 export function createRestyler(config = {}, deps = {}) {
   const now = deps.now ?? (() => performance.now());
@@ -195,6 +230,7 @@ export function createRestyler(config = {}, deps = {}) {
   let ok = false;
   let lastEmit = -Infinity;
   let timer = null;
+  let generation = 0;
   let prompt = null;
 
   const status = () => ({ ok, fps: frames.length, latency_ms: latency });
@@ -224,14 +260,20 @@ export function createRestyler(config = {}, deps = {}) {
     provider,
     async start(stream) {
       api.stop();
+      const own = generation;
       // ok only once a real frame arrives; the fallback (T33) debounces the switch to raw.
       lastFrame = -Infinity;
       ok = false;
       timer = setI(check, CHECK_MS);
       try {
         if (prompt !== null) provider.setPrompt(prompt);
-        return await provider.start(stream);
+        const output = await provider.start(stream);
+        if (own !== generation) throw new Error("Renderer stopped");
+        return output;
       } catch (err) {
+        if (own !== generation) throw err;
+        if (timer) { clearI(timer); timer = null; }
+        provider.stop();
         lastFrame = -Infinity;
         ok = false;
         emit();
@@ -243,6 +285,7 @@ export function createRestyler(config = {}, deps = {}) {
       provider.setPrompt(prompt);
     },
     stop() {
+      generation++;
       if (timer) { clearI(timer); timer = null; }
       provider.stop();
       if (ok) { ok = false; emit(); }

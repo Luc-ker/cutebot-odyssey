@@ -17,7 +17,10 @@ const styledVideo = $("styled");
 
 async function loadConfig() {
   try {
-    return await (await import("../common/config.js")).loadConfig();
+    const config = await (await import("../common/config.js")).loadConfig();
+    const response = await fetch("/api/restyle/config", { cache: "no-store" });
+    if (response.ok) Object.assign(config, await response.json());
+    return config;
   } catch (e) {
     console.warn("[eye] config not loaded, using defaults:", e.message);
     return {};
@@ -54,6 +57,8 @@ async function main() {
 
   // ---- mode: restyled or raw ----------------------------------------------------------------
   let forcedRaw = false;
+  let rendererStarted = false;
+  let rendererError = null;
   const mode = () => {
     if (forcedRaw) return "raw";
     // With the fallback module, it decides (debounced). Without it, follow the restyler directly.
@@ -61,7 +66,12 @@ async function main() {
     return raw ? "raw" : "restyled";
   };
   const applyMode = () => { stage.dataset.mode = mode(); };
-  restyler.onStatus(applyMode);
+  restyler.onStatus((status) => {
+    applyMode();
+    if (config.RESTYLE_PROVIDER !== "decart" || !rendererStarted || rendererError) return;
+    $("renderer").textContent = status.ok
+      ? "AI Kingdom live" : "AI paused · showing camera";
+  });
   fallback?.onChange(applyMode);
 
   setInterval(() => {
@@ -88,16 +98,26 @@ async function main() {
   async function useStream(stream) {
     if (!stream || stream === current) return;
     current = stream;
+    rendererStarted = false;
+    rendererError = null;
     rawVideo.srcObject = stream;
     rawVideo.play().catch(() => {});
     $("waiting").hidden = true;
+    $("renderer").textContent = config.RESTYLE_PROVIDER === "decart"
+      ? "Connecting Kingdom renderer…" : "Camera preview · AI renderer off";
     try {
       const out = await restyler.start(stream);
       if (current !== stream) return; // a newer stream arrived meanwhile
       styledVideo.srcObject = out;
       styledVideo.play().catch(() => {});
+      rendererStarted = true;
+      if (config.RESTYLE_PROVIDER === "decart") $("renderer").textContent = restyler.status.ok
+        ? "AI Kingdom live" : "AI connected · waiting for frames";
     } catch (e) {
+      if (current !== stream) return;
       console.warn("[eye] restyler failed, showing the raw feed:", e.message);
+      rendererError = e.message;
+      $("renderer").textContent = `AI rendering unavailable: ${e.message}`;
     }
     applyMode();
   }

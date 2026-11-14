@@ -36,6 +36,12 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
   font: 12px system-ui, sans-serif; color: rgba(255, 255, 255, .5);
   opacity: 0; transition: opacity .4s ease;
 }
+#renderer {
+  position: absolute; top: 12px; right: 12px; max-width: 60%;
+  padding: .3em .7em; border-radius: .3em;
+  font: 500 13px system-ui, sans-serif; color: #fff; background: #222b;
+}
+#renderer:empty { display: none; }
 body:hover #help { opacity: 1; }
 
 @media (prefers-reduced-motion: reduce) {

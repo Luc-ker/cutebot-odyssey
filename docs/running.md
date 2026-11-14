@@ -87,6 +87,9 @@ the world. The status page can still select other fallback worlds or reset to Ki
 assignment may use Gemini; local role assignment takes over if it is unavailable. Restart without
 `--no-music` when ready to test music-driven composition.
 
+For actual AI video transformation rather than the offline tint preview, configure Decart as described
+in [the restyle provider setup](restyle-provider.md). It also works with `--no-music`.
+
 ## Independent robot control
 
 Driving and the robot's existing onboard behavior belong to your already configured micro:bits. The laptop

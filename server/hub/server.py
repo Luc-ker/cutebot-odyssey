@@ -197,7 +197,25 @@ class HubServer:
             target = target / "index.html"
         return target if target.is_file() else None
 
-    def _process_request(self, connection: ServerConnection, request: Request) -> Response | None:
+    async def _process_request(self, connection: ServerConnection, request: Request) -> Response | None:
+        from .restyle import renderer_config, mint_token
+        path = request.path.split("?", 1)[0]
+        if path in ("/api/restyle/config", "/api/restyle/token"):
+            status, data = 200, renderer_config()
+            if path.endswith("/token"):
+                scheme = "https" if connection.transport.get_extra_info("ssl_object") else "http"
+                origin = f"{scheme}://{request.headers.get('Host', '')}"
+                if (request.headers.get("X-Genrator-Restyle") != "1"
+                        or request.headers.get("Origin", origin) != origin
+                        or request.headers.get("Sec-Fetch-Site") == "cross-site"):
+                    status, data = 403, {"error": "Same-origin renderer request required"}
+                else:
+                    status, data = await mint_token(origin)
+            response = self._response(status, "OK" if status == 200 else "Renderer Error",
+                                      json.dumps(data).encode(), "application/json")
+            del response.headers["Cache-Control"]
+            response.headers["Cache-Control"] = "no-store"
+            return response
         if request.path.split("?", 1)[0] == HUB_PATH:
             return None  # proceed with the WebSocket handshake
         target = self._resolve_static(request.path)

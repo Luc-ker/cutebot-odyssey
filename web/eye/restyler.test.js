@@ -92,3 +92,107 @@ test("start failure reports ok:false and rethrows", async () => {
 test("unknown provider throws", () => {
   assert.throws(() => createRestyler({ RESTYLE_PROVIDER: "nope" }), /unknown restyle provider/);
 });
+
+test("Decart fetches a fresh same-origin token and surfaces server failure", async () => {
+  const { fetchDecartToken } = await import("./restyler.js");
+  let calls = 0;
+  const fetcher = async (url, options) => {
+    assert.equal(url, "/api/restyle/token");
+    assert.equal(options.headers["X-Genrator-Restyle"], "1");
+    assert.equal(options.cache, "no-store");
+    calls++;
+    return { ok: true, json: async () => ({ apiKey: `token-${calls}` }) };
+  };
+  assert.equal(await fetchDecartToken(fetcher), "token-1");
+  assert.equal(await fetchDecartToken(fetcher), "token-2");
+  await assert.rejects(fetchDecartToken(async () => ({
+    ok: false, json: async () => ({ error: "Decart rejected token request (HTTP 401)" }),
+  })), /HTTP 401/);
+});
+
+test("Decart publishes an owned model-sized stream, refreshes tokens and cleans up", async () => {
+  const input = { id: "phone" }, normalized = { id: "normalized" }, remote = { id: "remote" };
+  let stopped = 0, disconnected = 0, unwatch = 0, tokens = 0;
+  const rt = { on() {}, setPrompt() {}, disconnect() { disconnected++; } };
+  const r = createRestyler({ RESTYLE_PROVIDER: "decart" }, {
+    setInterval: () => 1, clearInterval() {},
+    makeDecartSurface(options) {
+      assert.deepEqual(options, { width: 1280, height: 704, fps: 30, neutral: true });
+      return { async start(source) { assert.equal(source, input); return normalized; }, stop() { stopped++; } };
+    },
+    watchFrames(stream, onFrame) { assert.equal(stream, remote); onFrame(); return () => { unwatch++; }; },
+    fetch: async () => ({ ok: true, json: async () => ({ apiKey: `ephemeral-${++tokens}` }) }),
+    loadDecartSdk: async () => ({
+      models: { realtime: () => ({ width: 1280, height: 704, fps: 30 }) },
+      createDecartClient(options) {
+        assert.equal(options.apiKey, undefined);
+        return { realtime: { async connect(source, settings) {
+          assert.equal(source, normalized);
+          assert.equal(await options.apiKeyProvider(), "ephemeral-1");
+          assert.equal(await options.apiKeyProvider(), "ephemeral-2");
+          assert.equal(settings.initialState.prompt.text, "Kingdom");
+          settings.onRemoteStream(remote);
+          return rt;
+        } } };
+      },
+    }),
+  });
+  r.setPrompt("Kingdom");
+  assert.equal(await r.start(input), remote);
+  assert.equal(r.status.ok, true);
+  r.stop();
+  assert.equal(disconnected, 1);
+  assert.equal(stopped, 1);
+  assert.equal(unwatch, 1);
+});
+
+test("failed Decart start stops its canvas and watchdog", async () => {
+  let stops = 0, clears = 0;
+  const r = createRestyler({ RESTYLE_PROVIDER: "decart" }, {
+    setInterval: () => 1, clearInterval() { clears++; },
+    makeDecartSurface: () => ({ start: async () => ({}), stop() { stops++; } }),
+    loadDecartSdk: async () => ({ models: { realtime: () => ({}) },
+      createDecartClient: () => ({ realtime: { connect: async () => { throw new Error("denied"); } } }),
+    }),
+  });
+  await assert.rejects(r.start({}), /denied/);
+  assert.equal(stops, 1);
+  assert.equal(clears, 1);
+  assert.equal(r.status.ok, false);
+});
+
+test("late Decart connection cannot replace or stop the next phone session", async () => {
+  let finishOld, oldSettings, newSettings, calls = 0;
+  const stopped = [], disconnected = [];
+  const sdk = {
+    models: { realtime: () => ({}) },
+    createDecartClient: () => ({ realtime: { connect: async (input, settings) => {
+      calls++;
+      const rt = { on() {}, setPrompt() {}, disconnect() { disconnected.push(input.id); } };
+      if (calls === 1) { oldSettings = settings; await new Promise(resolve => { finishOld = resolve; }); }
+      else { newSettings = settings; settings.onRemoteStream({ id: 'new-remote' }); }
+      return rt;
+    } } }),
+  };
+  const r = createRestyler({ RESTYLE_PROVIDER: "decart" }, {
+    setInterval: () => 1, clearInterval() {}, loadDecartSdk: async () => sdk,
+    makeDecartSurface: () => { let id; return {
+      async start(source) { id = source.id; return source; }, stop() { stopped.push(id); },
+    }; },
+    watchFrames: (stream, frame) => { frame(); return () => {}; },
+  });
+  const old = r.start({ id: 'old' });
+  const rejected = assert.rejects(old, /Renderer stopped/);
+  while (!finishOld) await new Promise(resolve => setImmediate(resolve));
+  assert.equal((await r.start({ id: 'new' })).id, 'new-remote');
+  oldSettings.onRemoteStream({ id: 'stale' });
+  finishOld();
+  await rejected;
+  assert.deepEqual(disconnected, ['old']);
+  assert.deepEqual(stopped, ['old']);
+  assert.equal(r.status.ok, true);
+  assert.ok(newSettings);
+  r.stop();
+  assert.deepEqual(disconnected, ['old', 'new']);
+  assert.deepEqual(stopped, ['old', 'new']);
+});
