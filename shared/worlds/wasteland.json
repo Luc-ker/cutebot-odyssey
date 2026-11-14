@@ -1,0 +1,9 @@
+{
+  "id": "w-00000002",
+  "world": {"name": "Volcanic Wasteland", "setting": "volcanic wasteland", "mood": "fierce", "time_of_day": "night", "weather": "falling ash", "palette": ["lava red", "ember orange", "volcanic black"]},
+  "roles": [],
+  "terrain": {"open_space": "a field of black ash", "under_table": "a glowing lava cave"},
+  "restyle_prompt": "First-person, low across a volcanic wasteland at night, ash drifts over cracked ground and lava lights the horizon, painterly fantasy.",
+  "narration": "The earth burns beneath your wheels.",
+  "music_signature": {"tempo_bpm": 142, "energy": 0.94, "brightness": 0.3, "chroma": [0.05, 0.1, 0.05, 0.2, 0.05, 0.05, 0.2, 0.05, 0.05, 0.1, 0.05, 0.05]}
+}
