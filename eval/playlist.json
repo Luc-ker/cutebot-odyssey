@@ -1,0 +1,61 @@
+{
+  "_doc": "Demo playlist (T102): one track per whitepaper §7.6 world. Titles and links only; never commit audio files. 'status' is 'suggested' until a teammate has listened, checked the licence on the source page and tested it (docs/demo-audio.md), then 'chosen'. Keep 'licence' exactly as the source page states it.",
+  "tracks": [
+    {
+      "world": "Open ocean", "fallback": "ocean", "genre": "sea shanty",
+      "title": "Drunken Sailor (traditional)", "performer": "the team, sung or hummed, or any public-domain recording",
+      "source": "Traditional song, public domain. Singing it ourselves needs no licence.",
+      "url": "https://commons.wikimedia.org/w/index.php?search=Drunken+Sailor+ogg&ns6=1",
+      "licence": "public domain (composition); check the recording's page", "status": "suggested"
+    },
+    {
+      "world": "Volcanic wasteland", "fallback": "volcano", "genre": "heavy metal",
+      "title": "pick one", "performer": "",
+      "source": "Pixabay Music, search 'heavy metal'",
+      "url": "https://pixabay.com/music/search/heavy%20metal/",
+      "licence": "Pixabay Content License (check on the track page)", "status": "to pick"
+    },
+    {
+      "world": "Snowy night village", "fallback": "snow", "genre": "lullaby",
+      "title": "Wiegenlied (Lullaby), Op. 49 No. 4", "performer": "Johannes Brahms (composer), public-domain recording",
+      "source": "Musopen / Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/w/index.php?search=Brahms+Wiegenlied&ns6=1",
+      "licence": "public domain (composition); check the recording's page", "status": "suggested"
+    },
+    {
+      "world": "Kingdom", "fallback": "kingdom", "genre": "medieval lute",
+      "title": "Greensleeves (traditional, 16th century)", "performer": "public-domain lute/guitar recording",
+      "source": "Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/w/index.php?search=Greensleeves+lute&ns6=1",
+      "licence": "public domain (composition); check the recording's page", "status": "suggested"
+    },
+    {
+      "world": "Neon city", "fallback": "neon", "genre": "synthwave",
+      "title": "pick one", "performer": "",
+      "source": "Pixabay Music, search 'synthwave'",
+      "url": "https://pixabay.com/music/search/synthwave/",
+      "licence": "Pixabay Content License (check on the track page)", "status": "to pick"
+    },
+    {
+      "world": "Rainforest", "fallback": "rainforest", "genre": "jungle drums",
+      "title": "pick one (tribal / jungle percussion)", "performer": "",
+      "source": "Pixabay Music, search 'tribal drums'",
+      "url": "https://pixabay.com/music/search/tribal%20drums/",
+      "licence": "Pixabay Content License (check on the track page)", "status": "to pick"
+    },
+    {
+      "world": "Royal court", "fallback": "court", "genre": "classical strings",
+      "title": "The Four Seasons, Spring (Allegro), RV 269", "performer": "Antonio Vivaldi (composer), public-domain recording",
+      "source": "Musopen / Wikimedia Commons",
+      "url": "https://commons.wikimedia.org/w/index.php?search=Vivaldi+Spring+Allegro&ns6=1",
+      "licence": "public domain (composition); check the recording's page", "status": "suggested"
+    },
+    {
+      "world": "Space station", "fallback": "space", "genre": "ambient electronica",
+      "title": "pick one", "performer": "",
+      "source": "Pixabay Music, search 'ambient space'",
+      "url": "https://pixabay.com/music/search/ambient%20space/",
+      "licence": "Pixabay Content License (check on the track page)", "status": "to pick"
+    }
+  ]
+}
