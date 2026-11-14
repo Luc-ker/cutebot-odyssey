@@ -1,0 +1,9 @@
+{
+  "id": "w-00000006",
+  "world": {"name": "Rainforest", "setting": "deep rainforest", "mood": "mysterious", "time_of_day": "afternoon", "weather": "warm rain", "palette": ["jungle green", "mossy green", "amber"]},
+  "roles": [],
+  "terrain": {"open_space": "a fern-covered clearing", "under_table": "a hidden vine-wrapped ruin"},
+  "restyle_prompt": "First-person, low among rainforest roots and ferns, warm rain beads on leaves while an ancient temple rises through mist, painterly fantasy.",
+  "narration": "The green canopy parts to reveal an ancient path.",
+  "music_signature": {"tempo_bpm": 98, "energy": 0.68, "brightness": 0.54, "chroma": [0.1, 0.05, 0.15, 0.05, 0.1, 0.05, 0.1, 0.05, 0.15, 0.05, 0.1, 0.05]}
+}

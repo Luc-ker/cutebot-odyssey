@@ -1,0 +1,9 @@
+{
+  "id": "w-00000008",
+  "world": {"name": "Space Station", "setting": "orbital space station", "mood": "wonder-struck", "time_of_day": "starlit orbit", "weather": "solar haze", "palette": ["midnight blue", "cyan", "chrome"]},
+  "roles": [],
+  "terrain": {"open_space": "a star-filled docking bay", "under_table": "the humming engine room"},
+  "restyle_prompt": "First-person, low along a space station deck, cyan beacons guide the way as planets shine beyond a wide observation window, cinematic fantasy.",
+  "narration": "Stars gather beyond the station windows.",
+  "music_signature": {"tempo_bpm": 92, "energy": 0.34, "brightness": 0.7, "chroma": [0.1, 0.05, 0.05, 0.15, 0.05, 0.1, 0.05, 0.15, 0.05, 0.05, 0.15, 0.05]}
+}

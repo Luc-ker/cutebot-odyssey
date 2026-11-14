@@ -1,0 +1,9 @@
+{
+  "id": "w-00000007",
+  "world": {"name": "Royal Court", "setting": "grand royal court", "mood": "elegant", "time_of_day": "evening", "weather": "still air", "palette": ["royal purple", "pale gold", "crimson"]},
+  "roles": [],
+  "terrain": {"open_space": "a polished marble hall", "under_table": "the candlelit catacombs"},
+  "restyle_prompt": "First-person, low across polished marble in a royal court, velvet banners and candlelight glow beneath a painted vaulted ceiling, painterly fantasy.",
+  "narration": "The court awaits beneath its painted vault.",
+  "music_signature": {"tempo_bpm": 88, "energy": 0.38, "brightness": 0.64, "chroma": [0.15, 0.05, 0.1, 0.05, 0.15, 0.05, 0.1, 0.05, 0.05, 0.15, 0.05, 0.05]}
+}
