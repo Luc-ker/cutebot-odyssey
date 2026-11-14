@@ -45,3 +45,22 @@ def test_real_environment_is_used(monkeypatch):
 def test_bad_cast_raises_clear_error():
     with pytest.raises(ValueError, match="GENRATOR_HUB_PORT"):
         load_config(env={"GENRATOR_HUB_PORT": "abc"})
+
+
+@pytest.mark.parametrize("existing_key", [None, "key-from-shell"])
+def test_repo_dotenv_loads_key_without_overriding_shell_or_exposing_it_in_config(tmp_path, monkeypatch, existing_key):
+    from server.common import config
+
+    env_file = tmp_path / ".env"
+    env_file.write_text('GEMINI_API_KEY="key-from-local-file"\nGENRATOR_HUB_PORT=9876\n')
+    monkeypatch.setattr(config, "ENV_PATH", env_file)
+    monkeypatch.delenv("GENRATOR_HUB_PORT", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    if existing_key is not None:
+        monkeypatch.setenv("GEMINI_API_KEY", existing_key)
+    cfg = config.load_config()
+    import os
+    assert os.environ["GEMINI_API_KEY"] == (existing_key or "key-from-local-file")
+    assert cfg["HUB_PORT"] == 9876
+    assert "GEMINI_API_KEY" not in cfg
+    assert config.load_config(env={})["HUB_PORT"] == 8765

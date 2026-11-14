@@ -1,6 +1,7 @@
 """Shared config loader (T01, contract C10).
 
-`load_config()` reads `shared/config.json` and lets environment variables named
+`load_config()` loads the repository .env without overriding existing environment variables,
+then reads `shared/config.json` and lets environment variables named
 `GENRATOR_<KEY>` override any key, cast to the type of the default in the file.
 Keys starting with `_` (such as `_doc`) are documentation and are not returned.
 """
@@ -8,11 +9,14 @@ from __future__ import annotations
 
 import json
 import os
+
+from dotenv import load_dotenv
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = REPO_ROOT / "shared" / "config.json"
+ENV_PATH = REPO_ROOT / ".env"
 ENV_PREFIX = "GENRATOR_"
 
 _TRUE = {"1", "true", "yes", "on"}
@@ -43,7 +47,9 @@ def _cast(raw: str, default: Any, key: str) -> Any:
 
 def load_config(path: str | os.PathLike | None = None, env: dict | None = None) -> dict:
     """Return the config dict with `GENRATOR_<KEY>` env overrides applied."""
-    env = os.environ if env is None else env
+    if env is None:
+        load_dotenv(ENV_PATH, override=False)
+        env = os.environ
     with open(path or CONFIG_PATH, encoding="utf-8") as f:
         raw = json.load(f)
     cfg = {k: v for k, v in raw.items() if not k.startswith("_")}

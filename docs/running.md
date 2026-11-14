@@ -13,8 +13,13 @@ python -m venv .venv
 pip install -r requirements.txt
 pip install ultralytics                  # object detection; downloads model on first run
 pip install google-genai                 # optional Gemini world composition
-export GEMINI_API_KEY=...                # PowerShell: $env:GEMINI_API_KEY = "..."
+cp .env.example .env                    # Windows: copy .env.example .env
+# Edit .env and fill in GEMINI_API_KEY=your_key_here
 ```
+
+The app automatically loads `.env` from the repository root. Existing environment variables take
+precedence. Keep the key in your local `.env` (ignored by Git); `.env.example` contains no key. Restart
+the launcher after editing `.env`.
 
 Python 3.11+; Node 22+ is only needed for `npm test`. Without `ultralytics`, vision can still provide
 snapshots and heuristic hand detection but does not detect objects. Start it once on good internet to cache

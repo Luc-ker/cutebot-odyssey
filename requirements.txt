@@ -1,5 +1,6 @@
 websockets>=13
 jsonschema>=4.18
+python-dotenv>=1.0
 pytest>=8
 sounddevice>=0.4
 # pyserial>=3.5  # only for the optional --bridge integration
