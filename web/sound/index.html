@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Genrator · Sound</title>
+  <style>
+    :root {
+      --bg: #12110f; --panel: #1c1a17; --line: #2e2b26; --text: #ece6da; --muted: #9a9284;
+      --accent: #e8a33d; --ok: #7fbf6a; --bad: #d9654b;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    main { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
+    header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    h1 { font-size: 20px; margin: 0; letter-spacing: 0.02em; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; }
+    .status { display: flex; gap: 14px; font-size: 13px; color: var(--muted); }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); margin-right: 6px; }
+    .dot.on { background: var(--ok); }
+    #start {
+      width: 100%; padding: 36px 16px; font-size: 28px; font-weight: 700; letter-spacing: 0.02em;
+      color: #1a1307; background: var(--accent); border: 0; border-radius: 14px; cursor: pointer;
+    }
+    #start:disabled { background: var(--panel); color: var(--ok); border: 1px solid var(--line); cursor: default; font-size: 18px; padding: 16px; }
+    section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+    #speaking { min-height: 1.4em; font-size: 18px; line-height: 1.4; }
+    #speaking.idle { color: var(--muted); font-style: italic; }
+    #log { list-style: none; margin: 0; padding: 0; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    #log li { display: grid; grid-template-columns: 70px 120px 1fr; gap: 10px; padding: 4px 0; border-top: 1px solid var(--line); }
+    #log li:first-child { border-top: 0; }
+    #log .t { color: var(--muted); }
+    #log .k { color: var(--accent); }
+    #log .empty { display: block; color: var(--muted); }
+    #pad { display: flex; flex-wrap: wrap; gap: 6px; }
+    #pad button, .tools button {
+      font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 6px 10px; border-radius: 8px;
+      background: transparent; color: var(--text); border: 1px solid var(--line); cursor: pointer;
+    }
+    #pad button:hover, .tools button:hover { border-color: var(--accent); }
+    #pad button.horn { border-color: #5a4a2c; }
+    .tools { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    @media (max-width: 560px) { #log li { grid-template-columns: 56px 1fr; } #log .d { grid-column: 1 / -1; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Genrator · Sound</h1>
+      <div class="status">
+        <span><span class="dot" id="hub-dot"></span><span id="hub-text">Hub connecting…</span></span>
+        <span id="world">No world yet</span>
+      </div>
+    </header>
+
+    <button id="start" type="button">▶ Start sound</button>
+
+    <section>
+      <h2>Narrator</h2>
+      <div id="speaking" class="idle">Silent</div>
+      <div class="tools">
+        <button type="button" data-voice="">Test voice</button>
+        <button type="button" data-voice="deep">deep</button>
+        <button type="button" data-voice="bright">bright</button>
+        <button type="button" data-voice="old">old</button>
+        <button type="button" data-voice="robotic">robotic</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Last 10 events</h2>
+      <ul id="log"><li class="empty">Nothing yet.</li></ul>
+    </section>
+
+    <section>
+      <h2>Sound check</h2>
+      <div id="pad"></div>
+    </section>
+  </main>
+  <script type="module" src="./sound.js"></script>
+</body>
+</html>

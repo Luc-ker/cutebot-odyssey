@@ -1,0 +1,80 @@
+{
+  "_doc": "Narration templates (T82). 'settings' is checked in order: the first entry whose 'match' keyword appears in the world's setting (then its name) wins; anything missing falls back to 'default'. Placeholders: {world} world name, {name} object/threat name, {role} role in words, {a_role} role with a/an, {obstacle} obstacle words. 'voice' is a hint for TTS (deep, bright, old, robotic).",
+  "default": {
+    "voice": "",
+    "world_changed": "You arrive in {world}.",
+    "returning": "You return to {world}.",
+    "object_added": "{Name} appears.",
+    "object_added_from_sky": "{Name} falls from the sky!",
+    "giant_enter": "A giant's hand reaches down from the sky!",
+    "danger_enter": "Beware! {Name} stirs.",
+    "blocked": "{Obstacle} bars your way."
+  },
+  "settings": [
+    {
+      "key": "ocean",
+      "match": ["ocean", "sea", "pirate", "coast", "island", "harbour", "reef", "shanty"],
+      "voice": "old",
+      "object_added": "{Name} rises from the waves.",
+      "object_added_from_sky": "{Name} splashes down from the sky!",
+      "giant_enter": "A sea god's hand breaks the waves!",
+      "blocked": "{Obstacle} bars your way. Hard about!"
+    },
+    {
+      "key": "snow",
+      "match": ["snow", "ice", "frost", "frozen", "winter", "glacier", "arctic", "tundra"],
+      "voice": "bright",
+      "object_added": "{Name} emerges from the snow.",
+      "object_added_from_sky": "{Name} drifts down with the snowflakes!",
+      "giant_enter": "A frost giant's hand reaches through the blizzard!"
+    },
+    {
+      "key": "wasteland",
+      "match": ["wasteland", "volcan", "lava", "ash", "inferno", "fire", "desert"],
+      "voice": "deep",
+      "object_added": "{Name} rises from the ash.",
+      "object_added_from_sky": "{Name} crashes down in a shower of sparks!",
+      "giant_enter": "A fire giant's hand reaches through the smoke!"
+    },
+    {
+      "key": "space_station",
+      "match": ["space", "station", "orbit", "galaxy", "cosmic", "star"],
+      "voice": "robotic",
+      "object_added": "Sensors detect {name}.",
+      "object_added_from_sky": "{Name} docks from above!",
+      "giant_enter": "Alert! A colossal hand reaches into the station!",
+      "danger_enter": "Warning! {Name} detected."
+    },
+    {
+      "key": "neon_city",
+      "match": ["neon", "city", "cyber", "synth", "metropolis", "future"],
+      "voice": "robotic",
+      "object_added": "{Name} flickers into view.",
+      "object_added_from_sky": "{Name} drops from the skyline!",
+      "giant_enter": "A colossal mech's hand reaches down over the skyline!"
+    },
+    {
+      "key": "jungle",
+      "match": ["jungle", "rainforest", "forest", "swamp", "grove", "woods", "tropical"],
+      "voice": "deep",
+      "object_added": "{Name} appears through the vines.",
+      "object_added_from_sky": "{Name} tumbles down through the canopy!",
+      "giant_enter": "A forest giant's hand parts the canopy!"
+    },
+    {
+      "key": "royal_court",
+      "match": ["royal", "court", "palace", "throne", "baroque"],
+      "voice": "old",
+      "world_changed": "Presenting {world}.",
+      "object_added": "Announcing {name}.",
+      "giant_enter": "A titan's hand descends upon the court!"
+    },
+    {
+      "key": "kingdom",
+      "match": ["kingdom", "castle", "medieval", "village", "knight", "realm"],
+      "voice": "old",
+      "object_added": "{Name} appears upon the land.",
+      "giant_enter": "A stone titan's hand reaches down from the sky!"
+    }
+  ]
+}
