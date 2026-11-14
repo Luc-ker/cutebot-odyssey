@@ -8,10 +8,10 @@
   <style>
     :root { color-scheme: dark; font-family: system-ui, -apple-system, sans-serif; }
     html, body { margin: 0; height: 100%; background: #000; color: #fff; overflow: hidden; }
-    #preview { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .35; }
+    #preview { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: .35; }
     main {
-      position: relative; height: 100%; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 1rem; text-align: center; padding: 1rem;
+      position: relative; height: 100%; height: 100dvh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1rem; text-align: center; padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
       box-sizing: border-box;
     }
     #indicator {
@@ -25,6 +25,18 @@
     .row span { background: rgba(0,0,0,.6); padding: .3em .7em; border-radius: .4em; }
     #battery { font-size: 2rem; font-weight: 700; }
     #battery.low { color: #ff6060; }
+    #rotate-hint { display: none; max-width: 28rem; margin: 0; padding: .75rem 1rem;
+                   border-radius: .5rem; background: rgba(0,0,0,.8); line-height: 1.5; }
+    #rotate-hint strong { display: block; }
+    @media (orientation: portrait) {
+      #rotate-hint { display: block; }
+    }
+    @media (orientation: landscape) {
+      main { justify-content: space-between; gap: .5rem; }
+      #indicator { align-self: flex-start; font-size: clamp(1rem, 5vh, 2rem); }
+      #battery { align-self: flex-end; font-size: 1.25rem; }
+      .row { font-size: .85rem; gap: .4rem; }
+    }
     @media (prefers-reduced-motion: reduce) { #indicator { animation: none !important; } }
   </style>
 </head>
@@ -32,6 +44,8 @@
   <video id="preview" autoplay playsinline muted></video>
   <main>
     <div id="indicator" data-state="starting">Starting…</div>
+    <p id="rotate-hint" role="status"><strong>Turn your phone sideways for landscape</strong>
+      On iPhone, turn off Portrait Orientation Lock in Control Centre.</p>
     <div id="battery">Battery …</div>
     <div class="row">
       <span id="hub">Hub …</span>

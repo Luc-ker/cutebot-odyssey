@@ -12,6 +12,7 @@ export const VIDEO_CONSTRAINTS = {
   audio: false,
   video: {
     facingMode: { ideal: "environment" },
+    aspectRatio: { ideal: 16 / 9 },
     width: { ideal: 960 },
     height: { ideal: 540 },
     frameRate: { ideal: 30, max: 30 },
@@ -156,6 +157,11 @@ const LABELS = {
   error: "Error, retrying…",
 };
 
+// iPhone Safari may reject or omit orientation locking. Camera streaming must still start.
+async function preferLandscape() {
+  try { await globalThis.screen?.orientation?.lock?.("landscape"); } catch { /* use the rotation hint */ }
+}
+
 async function keepAwake(statusEl) {
   if (!("wakeLock" in navigator)) {
     statusEl.textContent = "Screen lock: keep the screen on manually";
@@ -202,6 +208,7 @@ export async function main() {
     return;
   }
 
+  preferLandscape();
   showBattery($("battery")).catch(() => {});
 
   const { connectHub } = await import("../common/hub.js");
@@ -221,7 +228,10 @@ export async function main() {
 
   // Wake Lock needs a user gesture on some browsers; try now, and again on first tap.
   keepAwake($("wake"));
-  document.addEventListener("click", () => keepAwake($("wake")), { once: true });
+  document.addEventListener("click", () => {
+    preferLandscape();
+    keepAwake($("wake"));
+  }, { once: true });
 
   try {
     preview.srcObject = await streamer.start();

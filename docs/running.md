@@ -30,7 +30,10 @@ view and local vision do not. Without a Gemini key, use fallback worlds on `/sta
 3. Start `python scripts/launch.py`. It starts **hub + brain + vision**, without a USB bridge.
 4. Open the printed `https://<laptop-IP>:8765/eye/` URL on the laptop and keep it visible.
 5. On the phone, open the printed `https://<laptop-IP>:8765/phone/` URL in Safari on iPhone or Chrome on
-   Android. Allow camera access. The page uses the rear camera; point it forward from the Cutebot mount.
+   Android. Allow camera access. The page prefers 16:9 landscape from the rear camera. Turn the phone
+   sideways; on iPhone, turn off **Portrait Orientation Lock** in Control Centre. Safari may not allow a
+   website to force rotation, so the page shows a hint while held upright. Point the rear camera forward
+   from the Cutebot mount. Refresh `/phone/` after updating to load the new layout.
 6. Keep the phone page visible, screen unlocked, and wait for **STREAMING**. The laptop eye page should show
    exactly what the phone sees. No camera app, video cable, Bluetooth connection or third micro:bit is needed.
 7. Open `/sound/` on the laptop and click **Start sound**. On `/status/`, check that `vision.state` arrives
