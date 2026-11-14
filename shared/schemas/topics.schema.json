@@ -1,0 +1,1786 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genrator.local/shared/schemas/topics.schema.json",
+  "description": "Hub envelope (C2) and one schema per topic (C3). Keep to the JSON Schema subset web/common/schemas.js supports: $ref (local), type, required, properties, items, minItems, maxItems, minimum, maximum, minLength, maxLength, pattern, enum, const, anyOf, allOf, if/then.",
+  "$defs": {
+    "unit": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "pos": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/unit"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "size": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/unit"
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "heading": {
+      "type": "number",
+      "minimum": -3.1416,
+      "maximum": 3.1416
+    },
+    "rgb": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "behaviour": {
+      "enum": [
+        "friendly",
+        "neutral",
+        "threat"
+      ]
+    },
+    "edge": {
+      "enum": [
+        "top",
+        "bottom",
+        "left",
+        "right"
+      ]
+    },
+    "id_any": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "world": {
+      "type": "object",
+      "required": [
+        "id",
+        "world",
+        "roles"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "world": {
+          "type": "object"
+        },
+        "roles": {
+          "type": "array"
+        }
+      },
+      "description": "Minimal World shape; full check is world.schema.json / validate_world (T02)."
+    }
+  },
+  "envelope": {
+    "type": "object",
+    "required": [
+      "topic",
+      "ts",
+      "src",
+      "data"
+    ],
+    "properties": {
+      "topic": {
+        "type": "string",
+        "minLength": 1
+      },
+      "ts": {
+        "type": "number"
+      },
+      "src": {
+        "type": "string",
+        "minLength": 1
+      },
+      "data": {
+        "type": "object"
+      }
+    }
+  },
+  "topics": {
+    "vision.state": {
+      "type": "object",
+      "required": [
+        "frame_ts",
+        "objects",
+        "robot",
+        "giants"
+      ],
+      "properties": {
+        "frame_ts": {
+          "type": "number"
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "cls",
+              "pos",
+              "size",
+              "conf"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "cls": {
+                "type": "string",
+                "minLength": 1
+              },
+              "pos": {
+                "$ref": "#/$defs/pos"
+              },
+              "size": {
+                "$ref": "#/$defs/size"
+              },
+              "conf": {
+                "$ref": "#/$defs/unit"
+              }
+            }
+          }
+        },
+        "robot": {
+          "anyOf": [
+            {
+              "type": "object",
+              "required": [
+                "pos",
+                "heading",
+                "seen"
+              ],
+              "properties": {
+                "pos": {
+                  "$ref": "#/$defs/pos"
+                },
+                "heading": {
+                  "$ref": "#/$defs/heading"
+                },
+                "seen": {
+                  "type": "boolean"
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "giants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "kind",
+              "pos",
+              "size",
+              "edge"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "hand",
+                  "person"
+                ]
+              },
+              "pos": {
+                "$ref": "#/$defs/pos"
+              },
+              "size": {
+                "$ref": "#/$defs/size"
+              },
+              "edge": {
+                "$ref": "#/$defs/edge"
+              }
+            }
+          }
+        }
+      }
+    },
+    "robot.telemetry": {
+      "type": "object",
+      "required": [
+        "distance_cm",
+        "line",
+        "override"
+      ],
+      "properties": {
+        "distance_cm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "line": {
+          "type": "array",
+          "items": {
+            "enum": [
+              0,
+              1
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "override": {
+          "type": "boolean"
+        }
+      }
+    },
+    "robot.cmd": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "lights",
+            "recoil",
+            "rumble"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "lights"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "mode",
+              "rgb",
+              "ms"
+            ],
+            "properties": {
+              "mode": {
+                "enum": [
+                  "solid",
+                  "flash",
+                  "pulse"
+                ]
+              },
+              "rgb": {
+                "$ref": "#/$defs/rgb"
+              },
+              "ms": {
+                "$ref": "#/$defs/ms"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "recoil"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "ms"
+            ],
+            "properties": {
+              "ms": {
+                "$ref": "#/$defs/ms"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "rumble"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "ms"
+            ],
+            "properties": {
+              "ms": {
+                "$ref": "#/$defs/ms"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "gamepad.button": {
+      "type": "object",
+      "required": [
+        "button"
+      ],
+      "properties": {
+        "button": {
+          "enum": [
+            "light",
+            "horn",
+            "shout",
+            "reset"
+          ]
+        }
+      }
+    },
+    "audio.beat": {
+      "type": "object",
+      "required": [
+        "tempo_bpm",
+        "strength"
+      ],
+      "properties": {
+        "tempo_bpm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "strength": {
+          "$ref": "#/$defs/unit"
+        }
+      }
+    },
+    "audio.features": {
+      "type": "object",
+      "required": [
+        "rms",
+        "energy",
+        "brightness",
+        "silent"
+      ],
+      "properties": {
+        "rms": {
+          "type": "number",
+          "minimum": 0
+        },
+        "energy": {
+          "$ref": "#/$defs/unit"
+        },
+        "brightness": {
+          "$ref": "#/$defs/unit"
+        },
+        "silent": {
+          "type": "boolean"
+        }
+      }
+    },
+    "world.current": {
+      "type": "object",
+      "required": [
+        "world",
+        "previous_id"
+      ],
+      "properties": {
+        "world": {
+          "$ref": "#/$defs/world"
+        },
+        "previous_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "world.transition": {
+      "type": "object",
+      "required": [
+        "from",
+        "to",
+        "started",
+        "duration_ms"
+      ],
+      "properties": {
+        "from": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/world"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to": {
+          "$ref": "#/$defs/world"
+        },
+        "started": {
+          "type": "number"
+        },
+        "duration_ms": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "world.objects": {
+      "type": "object",
+      "required": [
+        "world_id",
+        "objects",
+        "clusters",
+        "terrain"
+      ],
+      "properties": {
+        "world_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "objects": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "cls",
+              "pos",
+              "size",
+              "role",
+              "name",
+              "behaviour",
+              "cluster_id",
+              "from_sky"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "cls": {
+                "type": "string",
+                "minLength": 1
+              },
+              "pos": {
+                "$ref": "#/$defs/pos"
+              },
+              "size": {
+                "$ref": "#/$defs/size"
+              },
+              "role": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "name": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "behaviour": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/behaviour"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "cluster_id": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/id_any"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "from_sky": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "clusters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "pos",
+              "member_ids",
+              "role",
+              "name"
+            ],
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/id_any"
+              },
+              "pos": {
+                "$ref": "#/$defs/pos"
+              },
+              "member_ids": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "role": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "name": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "terrain": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "robot.state": {
+      "type": "object",
+      "required": [
+        "pos",
+        "heading",
+        "seen",
+        "distance_cm",
+        "override",
+        "facing_id"
+      ],
+      "properties": {
+        "pos": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/pos"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "heading": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/heading"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "seen": {
+          "type": "boolean"
+        },
+        "distance_cm": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "override": {
+          "type": "boolean"
+        },
+        "facing_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "world.event": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "object_added",
+            "object_removed",
+            "giant_enter",
+            "giant_leave",
+            "danger_enter",
+            "danger_exit",
+            "friendly_enter",
+            "blocked",
+            "world_changed",
+            "horn",
+            "shout"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "object_added"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "id",
+              "role",
+              "name",
+              "behaviour",
+              "announce",
+              "from_sky"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string"
+              },
+              "behaviour": {
+                "$ref": "#/$defs/behaviour"
+              },
+              "announce": {
+                "type": "boolean"
+              },
+              "from_sky": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "object_removed"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "giant_enter"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "id",
+              "kind",
+              "edge"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "hand",
+                  "person"
+                ]
+              },
+              "edge": {
+                "$ref": "#/$defs/edge"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "giant_leave"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "danger_enter"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "role"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "danger_exit"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "friendly_enter"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "role"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "blocked"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "obstacle"
+            ],
+            "properties": {}
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "world_changed"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "world_id",
+              "returning"
+            ],
+            "properties": {
+              "world_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "returning": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "horn"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [],
+            "properties": {}
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "shout"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "required": [
+              "facing_id"
+            ],
+            "properties": {
+              "facing_id": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "narration.say": {
+      "type": "object",
+      "required": [
+        "text",
+        "priority"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "voice": {
+          "type": "string"
+        }
+      }
+    },
+    "narration.speak": {
+      "type": "object",
+      "required": [
+        "id",
+        "text",
+        "voice"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id_any"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "voice": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "narration.done": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id_any"
+        }
+      }
+    },
+    "sfx.play": {
+      "type": "object",
+      "required": [
+        "sound"
+      ],
+      "properties": {
+        "sound": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "video.prompt": {
+      "type": "object",
+      "required": [
+        "prompt"
+      ],
+      "properties": {
+        "prompt": {
+          "type": "string"
+        }
+      }
+    },
+    "video.status": {
+      "type": "object",
+      "required": [
+        "mode",
+        "latency_ms"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "restyled",
+            "raw"
+          ]
+        },
+        "latency_ms": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "webrtc.signal": {
+      "type": "object",
+      "required": [
+        "to",
+        "from"
+      ],
+      "properties": {
+        "to": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sdp": {
+          "type": [
+            "object",
+            "string",
+            "null"
+          ]
+        },
+        "candidate": {
+          "type": [
+            "object",
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "system.health": {
+      "type": "object",
+      "required": [
+        "service",
+        "ok",
+        "detail"
+      ],
+      "properties": {
+        "service": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ok": {
+          "type": "boolean"
+        }
+      }
+    },
+    "system.reset": {
+      "type": "object"
+    },
+    "world.select": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "_samples": {
+    "_doc": "Test fixtures shared by the Python and JS validator tests.",
+    "valid": [
+      {
+        "topic": "vision.state",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "frame_ts": 1.0,
+          "objects": [
+            {
+              "id": 3,
+              "cls": "chair",
+              "pos": [
+                0.2,
+                0.3
+              ],
+              "size": [
+                0.1,
+                0.1
+              ],
+              "conf": 0.9
+            }
+          ],
+          "robot": {
+            "pos": [
+              0.5,
+              0.5
+            ],
+            "heading": 0.0,
+            "seen": true
+          },
+          "giants": [
+            {
+              "id": "g1",
+              "kind": "hand",
+              "pos": [
+                0.9,
+                0.1
+              ],
+              "size": [
+                0.2,
+                0.2
+              ],
+              "edge": "right"
+            }
+          ]
+        }
+      },
+      {
+        "topic": "robot.telemetry",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "distance_cm": 23.5,
+          "line": [
+            0,
+            1
+          ],
+          "override": false
+        }
+      },
+      {
+        "topic": "robot.cmd",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "kind": "lights",
+          "mode": "flash",
+          "rgb": [
+            255,
+            0,
+            0
+          ],
+          "ms": 200
+        }
+      },
+      {
+        "topic": "gamepad.button",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "button": "horn"
+        }
+      },
+      {
+        "topic": "audio.beat",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "tempo_bpm": 120.0,
+          "strength": 0.8
+        }
+      },
+      {
+        "topic": "audio.features",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "rms": 0.1,
+          "energy": 0.5,
+          "brightness": 0.4,
+          "silent": false
+        }
+      },
+      {
+        "topic": "world.current",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "world": {
+            "id": "w-1a2b3c4d",
+            "world": {
+              "name": "x",
+              "setting": "s",
+              "mood": "m",
+              "time_of_day": "d",
+              "weather": "w",
+              "palette": [
+                "a",
+                "b",
+                "c"
+              ]
+            },
+            "roles": []
+          },
+          "previous_id": null
+        }
+      },
+      {
+        "topic": "world.transition",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "from": null,
+          "to": {
+            "id": "w-1a2b3c4d",
+            "world": {
+              "name": "x",
+              "setting": "s",
+              "mood": "m",
+              "time_of_day": "d",
+              "weather": "w",
+              "palette": [
+                "a",
+                "b",
+                "c"
+              ]
+            },
+            "roles": []
+          },
+          "started": 1.0,
+          "duration_ms": 3000
+        }
+      },
+      {
+        "topic": "world.objects",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "world_id": "w-1a2b3c4d",
+          "objects": [
+            {
+              "id": 3,
+              "cls": "chair",
+              "pos": [
+                0.2,
+                0.3
+              ],
+              "size": [
+                0.1,
+                0.1
+              ],
+              "role": "castle",
+              "name": "Keep",
+              "behaviour": "neutral",
+              "cluster_id": null,
+              "from_sky": false
+            }
+          ],
+          "clusters": [
+            {
+              "id": 1,
+              "pos": [
+                0.2,
+                0.3
+              ],
+              "member_ids": [
+                3
+              ],
+              "role": "village",
+              "name": "Hamlet"
+            }
+          ],
+          "terrain": {
+            "open_space": "sea"
+          }
+        }
+      },
+      {
+        "topic": "robot.state",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "pos": [
+            0.5,
+            0.5
+          ],
+          "heading": 1.0,
+          "seen": true,
+          "distance_cm": 30.0,
+          "override": false,
+          "facing_id": 3
+        }
+      },
+      {
+        "topic": "world.event",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "kind": "object_added",
+          "id": 3,
+          "role": "castle",
+          "name": "Keep",
+          "behaviour": "neutral",
+          "announce": true,
+          "from_sky": false
+        }
+      },
+      {
+        "topic": "narration.say",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "text": "Hello",
+          "priority": 2
+        }
+      },
+      {
+        "topic": "narration.speak",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "id": "n1",
+          "text": "Hello",
+          "voice": "narrator"
+        }
+      },
+      {
+        "topic": "narration.done",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "id": "n1"
+        }
+      },
+      {
+        "topic": "sfx.play",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "sound": "bell"
+        }
+      },
+      {
+        "topic": "video.prompt",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "prompt": "stormy sea"
+        }
+      },
+      {
+        "topic": "video.status",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "mode": "raw",
+          "latency_ms": 120
+        }
+      },
+      {
+        "topic": "webrtc.signal",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "to": "eye",
+          "from": "phone",
+          "sdp": {
+            "type": "offer",
+            "sdp": "v=0"
+          }
+        }
+      },
+      {
+        "topic": "system.health",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "service": "hub",
+          "ok": true,
+          "detail": "3 clients"
+        }
+      },
+      {
+        "topic": "system.reset",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {}
+      },
+      {
+        "topic": "world.select",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "name": "kingdom"
+        }
+      }
+    ],
+    "invalid": [
+      {
+        "why": "pos outside 0-1",
+        "env": {
+          "topic": "vision.state",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "frame_ts": 1.0,
+            "objects": [
+              {
+                "id": 3,
+                "cls": "chair",
+                "pos": [
+                  2,
+                  0
+                ],
+                "size": [
+                  0.1,
+                  0.1
+                ],
+                "conf": 0.9
+              }
+            ],
+            "robot": {
+              "pos": [
+                0.5,
+                0.5
+              ],
+              "heading": 0.0,
+              "seen": true
+            },
+            "giants": [
+              {
+                "id": "g1",
+                "kind": "hand",
+                "pos": [
+                  0.9,
+                  0.1
+                ],
+                "size": [
+                  0.2,
+                  0.2
+                ],
+                "edge": "right"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "why": "robot pos outside 0-1",
+        "env": {
+          "topic": "vision.state",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "frame_ts": 1.0,
+            "objects": [
+              {
+                "id": 3,
+                "cls": "chair",
+                "pos": [
+                  0.2,
+                  0.3
+                ],
+                "size": [
+                  0.1,
+                  0.1
+                ],
+                "conf": 0.9
+              }
+            ],
+            "robot": {
+              "pos": [
+                0.5,
+                -0.1
+              ],
+              "heading": 0,
+              "seen": true
+            },
+            "giants": [
+              {
+                "id": "g1",
+                "kind": "hand",
+                "pos": [
+                  0.9,
+                  0.1
+                ],
+                "size": [
+                  0.2,
+                  0.2
+                ],
+                "edge": "right"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "why": "missing data",
+        "env": {
+          "topic": "audio.beat",
+          "ts": 1.0,
+          "src": "x"
+        }
+      },
+      {
+        "why": "ts is a string",
+        "env": {
+          "topic": "audio.beat",
+          "ts": "now",
+          "src": "x",
+          "data": {
+            "tempo_bpm": 120.0,
+            "strength": 0.8
+          }
+        }
+      },
+      {
+        "why": "data not an object",
+        "env": {
+          "topic": "audio.beat",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": [
+            1,
+            2
+          ]
+        }
+      },
+      {
+        "why": "bad mode",
+        "env": {
+          "topic": "robot.cmd",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "kind": "lights",
+            "mode": "strobe",
+            "rgb": [
+              1,
+              2,
+              3
+            ],
+            "ms": 1
+          }
+        }
+      },
+      {
+        "why": "colour > 255",
+        "env": {
+          "topic": "robot.cmd",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "kind": "lights",
+            "mode": "solid",
+            "rgb": [
+              256,
+              0,
+              0
+            ],
+            "ms": 1
+          }
+        }
+      },
+      {
+        "why": "recoil without ms",
+        "env": {
+          "topic": "robot.cmd",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "kind": "recoil"
+          }
+        }
+      },
+      {
+        "why": "unknown button",
+        "env": {
+          "topic": "gamepad.button",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "button": "jump"
+          }
+        }
+      },
+      {
+        "why": "strength > 1",
+        "env": {
+          "topic": "audio.beat",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "tempo_bpm": 120,
+            "strength": 1.5
+          }
+        }
+      },
+      {
+        "why": "silent not bool",
+        "env": {
+          "topic": "audio.features",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "rms": 0.1,
+            "energy": 0.5,
+            "brightness": 0.4,
+            "silent": "no"
+          }
+        }
+      },
+      {
+        "why": "priority 4",
+        "env": {
+          "topic": "narration.say",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "text": "x",
+            "priority": 4
+          }
+        }
+      },
+      {
+        "why": "unknown event kind",
+        "env": {
+          "topic": "world.event",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "kind": "explode"
+          }
+        }
+      },
+      {
+        "why": "giant_enter missing edge",
+        "env": {
+          "topic": "world.event",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "kind": "giant_enter",
+            "id": "g1"
+          }
+        }
+      },
+      {
+        "why": "line value 2",
+        "env": {
+          "topic": "robot.telemetry",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "distance_cm": 1,
+            "line": [
+              2,
+              0
+            ],
+            "override": false
+          }
+        }
+      },
+      {
+        "why": "world without id",
+        "env": {
+          "topic": "world.current",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "world": {
+              "world": {},
+              "roles": []
+            },
+            "previous_id": null
+          }
+        }
+      },
+      {
+        "why": "video mode bad",
+        "env": {
+          "topic": "video.status",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "mode": "hd",
+            "latency_ms": 1
+          }
+        }
+      }
+    ]
+  }
+}
