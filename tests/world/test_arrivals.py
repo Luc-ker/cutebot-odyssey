@@ -182,3 +182,66 @@ def test_reset_clears_state():
         assert arr.registry.all() == [] and arr.world is None
 
     asyncio.run(main())
+
+
+def test_objects_expire_when_vision_goes_silent():
+    t = [100.0]
+
+    async def main():
+        hub, arr = make(clock=lambda: t[0])
+        await hub.pub("world.current", {"world": WORLD, "previous_id": None})
+        arr.handle_vision(vstate([(1, "bottle")]), t[0])
+        await _settle(arr)
+        # vision stops: nothing happens inside the grace period...
+        t[0] += 3.0
+        assert arr.expire_if_idle(t[0]) == []
+        assert arr.registry.get(1) is not None
+        # ...and the object is removed once it has passed
+        t[0] += 2.5
+        assert arr.expire_if_idle(t[0]) == [1]
+        await _settle(arr)
+        assert [e["id"] for e in hub.events("object_removed")] == [1]
+        assert arr.registry.get(1) is None
+
+    asyncio.run(main())
+
+
+def test_expiry_waits_while_vision_is_flowing():
+    t = [100.0]
+
+    async def main():
+        hub, arr = make(clock=lambda: t[0])
+        await hub.pub("world.current", {"world": WORLD, "previous_id": None})
+        arr.handle_vision(vstate([(1, "bottle")]), t[0])
+        await _settle(arr)
+        # frames keep coming (the object just isn't in them): expiry is left to handle_vision
+        t[0] += 10.0
+        arr.handle_vision(vstate([]), t[0] - 0.5)
+        assert arr.expire_if_idle(t[0]) == []
+        # after a reset nothing has been seen, so there is nothing to expire
+        arr.reset()
+        assert arr.expire_if_idle(t[0] + 200) == []
+
+    asyncio.run(main())
+
+
+def test_background_expiry_loop_removes_silent_objects():
+    import server.world.arrivals as arrivals_mod
+
+    async def main():
+        hub, arr = make()
+        arr.registry.grace_s = 0.2
+        old_idle, old_tick = arrivals_mod.VISION_IDLE_S, arrivals_mod.EXPIRY_TICK_S
+        arrivals_mod.VISION_IDLE_S, arrivals_mod.EXPIRY_TICK_S = 0.1, 0.02
+        try:
+            await hub.pub("world.current", {"world": WORLD, "previous_id": None})
+            arr.handle_vision(vstate([(1, "bottle")]), time.time())
+            task = arr.start_expiry()
+            await asyncio.sleep(0.5)
+            await _settle(arr)
+            task.cancel()
+            assert [e["id"] for e in hub.events("object_removed")] == [1]
+        finally:
+            arrivals_mod.VISION_IDLE_S, arrivals_mod.EXPIRY_TICK_S = old_idle, old_tick
+
+    asyncio.run(main())

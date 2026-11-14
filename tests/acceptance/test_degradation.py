@@ -18,7 +18,6 @@ import asyncio
 import sys
 from pathlib import Path
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -153,11 +152,6 @@ def test_vision_silent_objects_stay_for_grace_and_nothing_crashes():
     asyncio.run(vision_goes_silent(check_removal=False))
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "T48/T50 gap: ObjectRegistry only expires objects inside update(), which arrivals calls per "
-    "vision.state. When vision.state stops entirely nothing calls it, so objects are never removed. "
-    "Needs a periodic registry.update({}, now) (or expiry in all()) while vision is silent. "
-    "Remove this mark when fixed."))
 def test_vision_silent_objects_removed_after_grace():
     asyncio.run(vision_goes_silent(check_removal=True))
 

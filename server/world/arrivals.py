@@ -7,6 +7,9 @@ object after its grace period, publish ``object_removed``.
 
 This module drives the shared ``ObjectRegistry`` (T48): it calls
 ``registry.update`` for every ``vision.state`` and clears it on ``system.reset``.
+If ``vision.state`` stops arriving altogether (the overhead camera machine is down),
+a background check keeps expiring objects so they still leave after the grace
+period (whitepaper §7.15) instead of staying on the map forever.
 """
 
 from __future__ import annotations
@@ -25,6 +28,8 @@ log = logging.getLogger(__name__)
 GEMINI_TIMEOUT_S = 4.0
 MAX_IN_FLIGHT = 2
 SKY_WINDOW_S = 3.0
+VISION_IDLE_S = 1.0   # no vision.state for this long → expire objects ourselves
+EXPIRY_TICK_S = 0.25
 BEHAVIOURS = ("friendly", "neutral", "threat")
 
 
@@ -54,6 +59,8 @@ class Arrivals:
         self._last_giant_ts: float | None = None
         self._pending: list[int] = []  # added before any world was known
         self._tasks: set[asyncio.Task] = set()
+        self._last_vision_ts: float | None = None
+        self._expiry_task: asyncio.Task | None = None
 
     # -- hub wiring --------------------------------------------------------
     def attach(self):
@@ -82,6 +89,7 @@ class Arrivals:
         self.world = None
         self._pending.clear()
         self._last_giant_ts = None
+        self._last_vision_ts = None
         self.in_flight = 0
 
     def set_world(self, world: dict):
@@ -95,6 +103,7 @@ class Arrivals:
 
     def handle_vision(self, data: dict, now: float):
         """Feed one vision.state; schedules role assignment for new objects."""
+        self._last_vision_ts = now
         if data.get("giants"):
             self._last_giant_ts = now
         diff = self.registry.update(data, now)
@@ -109,6 +118,32 @@ class Arrivals:
                 self._pending.remove(obj_id)
             self._spawn(self._publish("world.event", {"kind": "object_removed", "id": obj_id}))
         return diff
+
+    def expire_if_idle(self, now: float) -> list[int]:
+        """When vision.state has been silent for VISION_IDLE_S, drop objects past their grace period
+        (as a frame with nothing in it would) and publish ``object_removed``. Returns the removed ids."""
+        if self._last_vision_ts is None or now - self._last_vision_ts < VISION_IDLE_S:
+            return []
+        diff = self.registry.update(None, now)
+        for obj_id in diff.removed:
+            if obj_id in self._pending:
+                self._pending.remove(obj_id)
+            self._spawn(self._publish("world.event", {"kind": "object_removed", "id": obj_id}))
+        return diff.removed
+
+    def start_expiry(self):
+        """Run :meth:`expire_if_idle` in the background (``run`` does this)."""
+        async def loop():
+            while True:
+                await asyncio.sleep(EXPIRY_TICK_S)
+                try:
+                    self.expire_if_idle(self.clock())
+                except Exception:  # never let the check die; the next tick tries again
+                    log.exception("object expiry check failed")
+
+        if self._expiry_task is None or self._expiry_task.done():
+            self._expiry_task = asyncio.ensure_future(loop())
+        return self._expiry_task
 
     def _spawn(self, coro):
         task = asyncio.ensure_future(coro)
@@ -194,4 +229,5 @@ async def run(hub, config, *, registry=None, memory=None, request_role=None):
     arrivals = Arrivals(hub, config, registry=registry, memory=memory,
                         request_role=request_role or _default_request_role())
     arrivals.attach()
+    arrivals.start_expiry()
     return arrivals

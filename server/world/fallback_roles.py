@@ -12,7 +12,8 @@ list of role names already used by other objects in this world.
 
 Scoring per non-system role:
   +2 a role ``worlds`` keyword matches the world's setting/name,
-  +1 the role is marked for any world (``"*"``, ``"any"``, ``"all"``, ``"most"``),
+  +1 the role is marked for any world (``"*"``, ``"any"``, ``"all"``, ``"most"``), or lists
+     ``GENERIC_LIST_LEN`` or more worlds (a generic role written out longhand),
   +2 the detector class is in the role's ``classes``,
   +1 the role is not already taken.
 Ties break on a stable hash of (object id, role), so the same inputs always
@@ -28,6 +29,7 @@ import re
 from pathlib import Path
 
 ROLES_PATH = Path(__file__).resolve().parents[2] / "shared" / "roles.json"
+GENERIC_LIST_LEN = 6  # a role listing this many worlds or more is treated as generic
 
 # Used only until T03 ships shared/roles.json.
 DEFAULT_VOCAB = [
@@ -113,13 +115,20 @@ def _setting_text(info: dict) -> str:
 
 
 def _role_matches_setting(role: dict, text: str, tokens: set) -> int:
+    keywords = [str(kw).lower() for kw in role.get("worlds") or []]
+    # A role that names (nearly) every setting is a generic role written out longhand, as shared/roles.json
+    # does for tower, beacon, bridge...: it counts like "*", so a setting's own roles (lighthouse at sea)
+    # win over it.
+    spelled_out_generic = len([kw for kw in keywords if kw not in GENERIC_WORLDS]) >= GENERIC_LIST_LEN
     best = 0
-    for kw in role.get("worlds") or []:
-        kw = str(kw).lower()
+    for kw in keywords:
         if kw in GENERIC_WORLDS:
             best = max(best, 1)
         elif kw in tokens or (len(kw) > 3 and kw in text):
-            return 2
+            if spelled_out_generic:
+                best = max(best, 1)
+            else:
+                return 2
     return best
 
 

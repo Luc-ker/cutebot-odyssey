@@ -16,7 +16,6 @@ import asyncio
 import sys
 from pathlib import Path
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -156,11 +155,6 @@ def test_hand_drop_threat_recoil():
     asyncio.run(run_big_moment(check_serial=False))
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "T22/T05 mismatch: server/bridge/serial_bridge.py builds and reads codec dicts keyed by 'type' "
-    "({'type': 'R', 'ms': ..}), but the merged server/common/radio_codec.py (T05) uses 'kind' "
-    "({'kind': 'recoil', 'ms': ..}). encode() returns None, so the bridge never writes R/L/V lines "
-    "(and decode()d telemetry/button packets raise KeyError). Remove this mark when T22 is fixed."))
 def test_recoil_reaches_serial_port():
     """The recoil and the red flash are written to the bridge micro:bit as R,<ms> and L,F,255,0,0,.. lines."""
     asyncio.run(run_big_moment(check_serial=True))

@@ -3,61 +3,32 @@
  serial T,...  -> robot.telemetry     serial B,x -> gamepad.button
  robot.cmd     -> serial line (lights capped to LIGHT_MAX_HZ, latest wins; recoil/rumble never dropped)
 
-ASSUMPTION (reconcile with T05 server/common/radio_codec.py): decode() returns
- {"type":"T","distance_cm","line":[l,r],"override"} / {"type":"B","button":"L|H|S|R"} and encode() takes
- {"type":"L","mode":"S|F|P","rgb":[..],"ms"} / {"type":"R","ms"} / {"type":"V","ms"}.
-Small local fallbacks are used if radio_codec is not merged yet.
+Packets go through the shared codec (T05, server/common/radio_codec.py). Its dicts use the same `kind`
+field as robot.cmd (C3/C6): {"kind": "lights"|"recoil"|"rumble", ...} encode to L/R/V lines, and decode()
+returns {"kind": "telemetry", ...} or {"kind": "button", "button": "light"|...}.
 """
 import asyncio
 import logging
 import os
 import time
 
+from server.common.radio_codec import decode, encode
+
 log = logging.getLogger("serial_bridge")
 
-BUTTONS = {"L": "light", "H": "horn", "S": "shout", "R": "reset"}
-MODES = {"solid": "S", "flash": "F", "pulse": "P"}
-
-
-def _fallback_decode(line):
-    try:
-        p = line.strip().split(",")
-        if p[0] == "T" and len(p) == 5:
-            return {"type": "T", "distance_cm": int(p[1]), "line": [int(p[2]), int(p[3])], "override": int(p[4])}
-        if p[0] == "B" and len(p) == 2 and p[1] in BUTTONS:
-            return {"type": "B", "button": p[1]}
-    except Exception:
-        pass
-    return None
-
-
-def _fallback_encode(d):
-    def c(v, lo, hi):
-        return max(lo, min(hi, int(v)))
-    k = d["type"]
-    if k == "L":
-        r, g, b = (c(x, 0, 255) for x in d["rgb"])
-        return "L,%s,%d,%d,%d,%d" % (d["mode"], r, g, b, c(d.get("ms", 0), 0, 5000))
-    return "%s,%d" % (k, c(d["ms"], 0, 5000))
-
-
-try:
-    from server.common.radio_codec import decode, encode
-except ImportError:
-    decode, encode = _fallback_decode, _fallback_encode
+CMD_KINDS = ("lights", "recoil", "rumble")
 
 
 def cmd_to_line(data):
-    """robot.cmd data -> serial line (no newline), or None if unknown."""
+    """robot.cmd data -> serial line (no newline), or None if it isn't a command the bridge forwards."""
     kind = data.get("kind")
+    if kind not in CMD_KINDS:
+        return None
+    msg = dict(data)
     if kind == "lights":
-        return encode({"type": "L", "mode": MODES.get(data.get("mode"), "S"),
-                       "rgb": data["rgb"], "ms": data.get("ms", 0)})
-    if kind == "recoil":
-        return encode({"type": "R", "ms": data["ms"]})
-    if kind == "rumble":
-        return encode({"type": "V", "ms": data["ms"]})
-    return None
+        msg.setdefault("mode", "solid")
+        msg.setdefault("ms", 0)
+    return encode(msg)
 
 
 def open_serial(port_name=None):
@@ -91,13 +62,13 @@ class SerialBridge:
         pkt = decode(line.strip())
         if not pkt:
             return
-        if pkt["type"] == "T":
+        if pkt["kind"] == "telemetry":
             await self.hub.pub("robot.telemetry", {
                 "distance_cm": pkt["distance_cm"],
                 "line": [int(pkt["line"][0]), int(pkt["line"][1])],
                 "override": bool(pkt["override"])})
-        elif pkt["type"] == "B":
-            await self.hub.pub("gamepad.button", {"button": BUTTONS[pkt["button"]]})
+        elif pkt["kind"] == "button":
+            await self.hub.pub("gamepad.button", {"button": pkt["button"]})
 
     # ---- hub -> serial
     def _write(self, line):
