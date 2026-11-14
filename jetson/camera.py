@@ -116,7 +116,7 @@ class Camera:
 
     def _configure(self, cap: cv2.VideoCapture) -> None:
         # MJPG lets USB 2 cameras reach 720p30; then size, rate, and manual exposure / white balance.
-        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+        cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))  # privacy-ok: sets the capture codec; nothing is written
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
         cap.set(cv2.CAP_PROP_FPS, self.target_fps)

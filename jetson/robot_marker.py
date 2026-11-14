@@ -118,5 +118,5 @@ if __name__ == "__main__":
     import sys
 
     out = sys.argv[1] if len(sys.argv) > 1 else "robot_marker.png"
-    cv2.imwrite(out, render_marker())
+    cv2.imwrite(out, render_marker())  # privacy-ok: a generated printable marker, not camera data
     print(f"wrote {out} (DICT_4X4_50 id {MARKER_ID})")

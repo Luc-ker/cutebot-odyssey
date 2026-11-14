@@ -101,7 +101,7 @@ def main() -> None:
     if corners is None:
         sys.exit("calibration cancelled" if not args.aruco else "could not find ArUco markers 0-3")
     calib = Calibration(corners, (frame.shape[1], frame.shape[0]))
-    calib.save(args.out)
+    calib.save(args.out)  # privacy-ok: writes the four corner coordinates (JSON), not an image
     print(f"saved {args.out}: corners {np.round(corners, 1).tolist()}")
 
 
