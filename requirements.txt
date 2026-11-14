@@ -1,3 +1,6 @@
 websockets>=13
 jsonschema>=4.18
 pytest>=8
+numpy>=1.24
+opencv-python-headless>=4.8
+# ultralytics  # detector model; on the Jetson install per docs/jetson-setup.md
