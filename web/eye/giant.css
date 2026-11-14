@@ -1,0 +1,48 @@
+/* Giant arrival effect (T35). */
+.giant { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+/* The darkened sky: a gradient from the top edge. Lifts (fades and rises) when the giant leaves. */
+.giant-shadow {
+  position: absolute; left: -10%; right: -10%; top: 0; height: 75%;
+  background:
+    radial-gradient(ellipse 60% 70% at 50% 0%, rgba(0, 0, 0, .85) 0%, rgba(0, 0, 0, .55) 45%, transparent 75%),
+    linear-gradient(to bottom, rgba(0, 0, 0, .55), transparent);
+  opacity: 0;
+  transform: translateY(-100%);
+  transition: opacity 1.2s ease, transform 1.4s ease;
+}
+.giant.active .giant-shadow { opacity: 1; transform: translateY(0); }
+.giant-shadow.sweep { animation: giant-sweep 1.1s cubic-bezier(.2, .7, .3, 1) both; }
+@keyframes giant-sweep {
+  0% { transform: translateY(-100%); opacity: .2; }
+  55% { transform: translateY(18%); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.giant-caption {
+  position: absolute; top: 18%; left: 50%;
+  transform: translate(-50%, -12px);
+  max-width: 88vw; text-align: center;
+  font: 700 clamp(22px, 4vw, 58px) "Cinzel", "Palatino Linotype", Palatino, Georgia, serif;
+  letter-spacing: .03em;
+  color: #fff3d6;
+  text-shadow: 0 2px 6px #000, 0 0 24px rgba(0, 0, 0, .9);
+  opacity: 0;
+  transition: opacity .6s ease, transform .6s ease;
+}
+.giant-caption.visible { opacity: 1; transform: translate(-50%, 0); }
+
+/* Applied to the eye page's .stage, so the whole view shakes. */
+.giant-shake { animation: giant-shake .6s cubic-bezier(.36, .07, .19, .97) both; }
+@keyframes giant-shake {
+  10%, 90% { transform: translate(-2px, 1px); }
+  20%, 80% { transform: translate(5px, -2px); }
+  30%, 50%, 70% { transform: translate(-9px, 3px); }
+  40%, 60% { transform: translate(9px, -3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .giant-shadow.sweep { animation: none; }
+  .giant-shadow, .giant-caption { transition-duration: .3s; }
+  .giant-shake { animation: none; }
+}

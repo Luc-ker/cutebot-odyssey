@@ -1,0 +1,51 @@
+/* Raw-feed fallback overlay (T33). Sits above the raw video; the eye page hides the restyled video
+   while .fallback.active is set. */
+.fallback {
+  position: absolute; inset: 0; pointer-events: none;
+  opacity: 0; transition: opacity .8s ease;
+  --fb-c1: #1d4f6b; --fb-c2: #3b3b4f; --fb-c3: #d6a740;
+}
+.fallback.active { opacity: 1; }
+
+.fb-tint {
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg, var(--fb-c1) 0%, var(--fb-c2) 55%, var(--fb-c3) 120%);
+  mix-blend-mode: color;
+  opacity: .55;
+}
+
+.fb-vignette {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, .75) 100%);
+}
+
+.fb-badge {
+  position: absolute; top: clamp(12px, 3vh, 32px); right: clamp(48px, 7vw, 96px);
+  padding: .25em .7em; border-radius: .3em;
+  font: 600 clamp(11px, 1.2vw, 16px) system-ui, sans-serif; letter-spacing: .03em;
+  color: #fff; background: rgba(0, 0, 0, .55);
+}
+
+.fb-label {
+  position: absolute; left: 50%; bottom: clamp(70px, 14vh, 160px);
+  transform: translateX(-50%);
+  max-width: 86vw; text-align: center;
+  padding: .25em .8em;
+  font: 700 clamp(26px, 5vw, 72px) "Cinzel", "Palatino Linotype", Palatino, Georgia, serif;
+  color: #fff;
+  background: rgba(0, 0, 0, .5);
+  border-bottom: 5px solid var(--fb-c3);
+  border-radius: .2em;
+  text-shadow: 0 2px 4px #000, 0 0 18px rgba(0, 0, 0, .8);
+  opacity: 0; transition: opacity .4s ease;
+}
+.fb-label.visible { opacity: 1; }
+.fb-label[data-behaviour="threat"] { border-bottom-color: #e0303a; }
+.fb-label[data-behaviour="friendly"] { border-bottom-color: #4fd17a; }
+
+/* The big label replaces the HUD's small "Ahead:" line while the fallback is up. */
+.stage:has(.fallback.active) .hud-ahead { opacity: 0 !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fallback, .fb-label { transition: none; }
+}

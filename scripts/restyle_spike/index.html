@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Restyle spike</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; padding: 16px; background: #111; color: #eee; }
+    h1 { font-size: 18px; margin: 0 0 12px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .videos { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+    figure { margin: 0; } figcaption { font-size: 12px; color: #999; margin-bottom: 4px; }
+    video { width: 100%; aspect-ratio: 16 / 9; background: #000; object-fit: cover; border-radius: 6px; }
+    input[type=text] { flex: 1; min-width: 260px; padding: 8px; background: #222; color: #eee; border: 1px solid #444; border-radius: 4px; }
+    button, select { padding: 8px 12px; background: #2a2a2a; color: #eee; border: 1px solid #555; border-radius: 4px; cursor: pointer; }
+    #stats { font: 13px ui-monospace, monospace; white-space: pre; background: #1a1a1a; padding: 10px; border-radius: 6px; }
+    #log { font: 12px ui-monospace, monospace; white-space: pre-wrap; max-height: 240px; overflow: auto; background: #1a1a1a; padding: 10px; border-radius: 6px; }
+    .hint { font-size: 13px; color: #aaa; max-width: 70ch; }
+  </style>
+</head>
+<body>
+  <h1>Restyle provider spike (T27)</h1>
+  <p class="hint">
+    Run from the repo root with <code>python3 -m http.server 8000</code> and open
+    <code>http://localhost:8000/scripts/restyle_spike/</code> (localhost counts as secure, so the webcam works).
+    Pick a provider, start, type prompts. <b>Lag test:</b> press "Measure lag", then cover the webcam
+    with your hand and uncover it a few times. The page times each brightness jump in the raw feed
+    against the same jump in the restyled feed.
+  </p>
+  <div class="row">
+    <select id="provider"><option>fake</option><option>decart</option></select>
+    <button id="start">Start</button>
+    <button id="stop">Stop</button>
+    <button id="lag">Measure lag</button>
+    <button id="copy">Copy results JSON</button>
+  </div>
+  <div class="row">
+    <input id="prompt" type="text" value="a stormy ocean at dusk, rain, wooden ships, lantern light, painterly">
+    <button id="send">Set prompt</button>
+    <button id="preset">Cycle preset</button>
+  </div>
+  <div class="videos">
+    <figure><figcaption>Raw webcam</figcaption><video id="raw" autoplay playsinline muted></video></figure>
+    <figure><figcaption>Restyled</figcaption><video id="out" autoplay playsinline muted></video></figure>
+  </div>
+  <div class="row" style="margin-top:12px"><div id="stats">not started</div></div>
+  <div id="log"></div>
+  <script type="module" src="./spike.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+/* Robot's-eye HUD (T32). Readable on both bright and dark video: dark translucent backing plus a
+   text shadow on every label. */
+.hud {
+  position: absolute; inset: 0; pointer-events: none;
+  font-family: "Cinzel", "Palatino Linotype", Palatino, Georgia, serif;
+  color: #fff;
+}
+
+.hud-world {
+  position: absolute; top: clamp(12px, 3vh, 32px); left: clamp(12px, 3vw, 40px);
+  max-width: 60vw;
+  padding: .3em .75em .35em;
+  font-size: clamp(18px, 3.2vw, 44px); font-weight: 700; letter-spacing: .04em;
+  color: var(--hud-accent, #f4e2b0);
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--hud-from, #000) 35%, rgba(0, 0, 0, .55)),
+    rgba(0, 0, 0, .25));
+  border-left: 4px solid var(--hud-to, var(--hud-accent, #f4e2b0));
+  border-radius: .25em;
+  text-shadow: 0 1px 2px #000, 0 0 10px rgba(0, 0, 0, .8);
+  opacity: 0; transition: opacity .6s ease, color 1.2s ease;
+}
+.hud-world.visible { opacity: 1; }
+
+.hud-ahead {
+  position: absolute; bottom: clamp(16px, 6vh, 64px); left: 50%;
+  transform: translate(-50%, 8px);
+  max-width: 80vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: .35em .9em;
+  font-size: clamp(16px, 2.4vw, 34px); font-weight: 600;
+  background: rgba(0, 0, 0, .55);
+  border-radius: 999px;
+  text-shadow: 0 1px 2px #000;
+  opacity: 0; transition: opacity .5s ease, transform .5s ease;
+}
+.hud-ahead.visible { opacity: 1; transform: translate(-50%, 0); }
+
+.hud-beat {
+  position: absolute; top: clamp(14px, 3vh, 34px); right: clamp(14px, 3vw, 40px);
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--hud-accent, #ffd36b);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, .55);
+  opacity: .45;
+}
+.hud-beat.pop { animation: hud-pop .16s ease-out; }
+@keyframes hud-pop {
+  0% { transform: scale(calc(1 + var(--beat-strength, 1) * .9)); opacity: 1;
+       box-shadow: 0 0 0 2px rgba(0, 0, 0, .55), 0 0 18px var(--hud-accent, #ffd36b); }
+  100% { transform: scale(1); opacity: .45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-beat.pop { animation-duration: .08s; }
+  .hud-ahead { transition: opacity .3s ease; transform: translate(-50%, 0); }
+}

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Genrator · Robot's eye</title>
+  <link rel="stylesheet" href="./eye.css">
+</head>
+<body>
+  <div class="stage" id="stage" data-mode="raw">
+    <video id="raw" autoplay playsinline muted></video>
+    <video id="styled" autoplay playsinline muted></video>
+    <!-- Optional overlay modules mount into these slots; a missing one only logs a warning. -->
+    <div class="slot" id="slot-pulse"></div>
+    <div class="slot" id="slot-fallback"></div>
+    <div class="slot" id="slot-giant"></div>
+    <div class="slot" id="slot-hud"></div>
+    <div id="waiting">Waiting for the robot's eye…</div>
+    <div id="conn" hidden>Hub offline</div>
+    <div id="help">F fullscreen · R raw camera</div>
+  </div>
+  <script type="module" src="./eye.js"></script>
+</body>
+</html>

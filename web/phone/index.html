@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <title>Genrator · Robot eye</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, sans-serif; }
+    html, body { margin: 0; height: 100%; background: #000; color: #fff; overflow: hidden; }
+    #preview { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .35; }
+    main {
+      position: relative; height: 100%; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1rem; text-align: center; padding: 1rem;
+      box-sizing: border-box;
+    }
+    #indicator {
+      font-size: clamp(2rem, 10vw, 4.5rem); font-weight: 800; letter-spacing: .04em;
+      padding: .4em .8em; border-radius: .4em; background: #333;
+    }
+    #indicator[data-state="streaming"] { background: #c0142b; animation: live 1.6s ease-in-out infinite; }
+    #indicator[data-state="error"] { background: #7a4b00; }
+    @keyframes live { 50% { opacity: .65; } }
+    .row { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; font-size: 1.1rem; }
+    .row span { background: rgba(0,0,0,.6); padding: .3em .7em; border-radius: .4em; }
+    #battery { font-size: 2rem; font-weight: 700; }
+    #battery.low { color: #ff6060; }
+    @media (prefers-reduced-motion: reduce) { #indicator { animation: none !important; } }
+  </style>
+</head>
+<body>
+  <video id="preview" autoplay playsinline muted></video>
+  <main>
+    <div id="indicator" data-state="starting">Starting…</div>
+    <div id="battery">Battery …</div>
+    <div class="row">
+      <span id="hub">Hub …</span>
+      <span id="wake">Screen lock …</span>
+      <span id="res"></span>
+    </div>
+  </main>
+  <script type="module">
+    import { main } from "./phone.js";
+    main();
+  </script>
+</body>
+</html>
