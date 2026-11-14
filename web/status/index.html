@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Genrator · Status</title>
+  <style>
+    :root {
+      --bg: #12110f; --panel: #1c1a17; --line: #2e2b26; --text: #ece6da; --muted: #9a9284;
+      --accent: #e8a33d; --ok: #7fbf6a; --bad: #d9654b; --warn: #d8b54a;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 16px;
+           grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    header, .wide { grid-column: 1 / -1; }
+    header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    h1 { font-size: 20px; margin: 0; letter-spacing: 0.02em; }
+    h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px;
+         display: flex; justify-content: space-between; gap: 8px; }
+    h2 small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+    .status { display: flex; gap: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); margin-right: 6px; }
+    .dot.on { background: var(--ok); }
+    section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0; }
+    table { width: 100%; border-collapse: collapse; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    th { text-align: left; color: var(--muted); font-weight: 400; padding: 3px 6px; border-bottom: 1px solid var(--line); }
+    td { padding: 3px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    td.detail { color: var(--muted); overflow-wrap: anywhere; }
+    tr.sub td:first-child { padding-left: 18px; color: var(--muted); }
+    .pill { display: inline-block; min-width: 44px; text-align: center; padding: 0 6px; border-radius: 6px; font-size: 12px; }
+    .pill.ok { background: #263a20; color: var(--ok); }
+    .pill.bad { background: #3f2119; color: var(--bad); }
+    .pill.stale { background: #3a321a; color: var(--warn); }
+    .empty { color: var(--muted); font-style: italic; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+    button, input[type=text], select {
+      font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 7px 10px; border-radius: 8px;
+      background: transparent; color: var(--text); border: 1px solid var(--line);
+    }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.danger { border-color: #6b3226; color: #f0b3a4; }
+    button.big { font-size: 15px; padding: 12px 16px; font-weight: 700; background: #3f2119; }
+    button.on { background: var(--accent); color: #1a1307; border-color: var(--accent); }
+    button.current { border-color: var(--ok); color: var(--ok); }
+    .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .row input[type=text] { flex: 1 1 220px; min-width: 0; }
+    .sep { height: 1px; background: var(--line); margin: 12px 0; }
+    #log { list-style: none; margin: 0; padding: 0; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+           max-height: 340px; overflow-y: auto; }
+    #log li { display: grid; grid-template-columns: 64px 34px 150px minmax(0, 1fr); gap: 8px; padding: 3px 0;
+              border-top: 1px solid var(--line); }
+    #log li:first-child { border-top: 0; }
+    #log .t { color: var(--muted); }
+    #log .dir.out { color: var(--accent); }
+    #log .dir.in { color: var(--ok); }
+    #log .d { color: var(--muted); overflow-wrap: anywhere; }
+    @media (max-width: 860px) {
+      main { grid-template-columns: minmax(0, 1fr); }
+      #log li { grid-template-columns: 56px 30px minmax(0, 1fr); }
+      #log .d { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Genrator · Status</h1>
+      <div class="status">
+        <span><span class="dot" id="hub-dot"></span><span id="hub-text">Hub connecting…</span></span>
+        <span id="world">No world yet</span>
+      </div>
+    </header>
+
+    <section>
+      <h2>Services <small id="svc-summary"></small></h2>
+      <table>
+        <thead><tr><th>service</th><th>state</th><th class="num">seen</th><th>detail</th></tr></thead>
+        <tbody id="services"><tr><td colspan="4" class="empty">Waiting for system.health…</td></tr></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Message rates <small>msg/s over the last 5 s</small></h2>
+      <table>
+        <thead><tr><th>topic</th><th class="num">rate</th><th class="num">last</th></tr></thead>
+        <tbody id="rates"><tr><td colspan="3" class="empty">No messages yet.</td></tr></tbody>
+      </table>
+    </section>
+
+    <section class="wide">
+      <h2>Controls</h2>
+      <div class="buttons">
+        <button type="button" class="big" id="reset">⟲ Full reset</button>
+        <button type="button" id="mute">Mute sounds</button>
+      </div>
+      <div class="sep"></div>
+      <h2>Fallback worlds <small>world.select</small></h2>
+      <div class="buttons" id="worlds"></div>
+      <div class="sep"></div>
+      <h2>Fake events <small>world.event, for testing</small></h2>
+      <div class="buttons">
+        <button type="button" data-fake="giant_enter">giant_enter</button>
+        <button type="button" data-fake="giant_leave">giant_leave</button>
+        <button type="button" data-fake="danger_enter">danger_enter</button>
+        <button type="button" data-fake="danger_exit">danger_exit</button>
+        <button type="button" data-fake="object_added">object_added</button>
+      </div>
+      <form class="row" id="say-form">
+        <input type="text" id="say-text" placeholder="Say a narration line…" maxlength="200" autocomplete="off">
+        <select id="say-priority" aria-label="priority">
+          <option value="1">priority 1</option>
+          <option value="2" selected>priority 2</option>
+          <option value="3">priority 3</option>
+        </select>
+        <button type="submit">Say</button>
+      </form>
+    </section>
+
+    <section class="wide">
+      <h2>Message log <small>↑ sent by this page · ↓ control messages seen on the hub</small></h2>
+      <ul id="log"><li class="empty">Nothing yet.</li></ul>
+    </section>
+  </main>
+  <script type="module" src="./status.js"></script>
+</body>
+</html>
