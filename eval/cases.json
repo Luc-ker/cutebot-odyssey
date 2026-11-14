@@ -1,0 +1,16 @@
+{
+  "songs": [
+    {"id": "sea-shanty", "title": "Sea shanty", "clip": "eval/assets/audio/sea-shanty.wav"},
+    {"id": "heavy-metal", "title": "Heavy metal", "clip": "eval/assets/audio/heavy-metal.wav"},
+    {"id": "lullaby", "title": "Lullaby", "clip": "eval/assets/audio/lullaby.wav"},
+    {"id": "medieval-lute", "title": "Medieval lute", "clip": "eval/assets/audio/medieval-lute.wav"},
+    {"id": "synthwave", "title": "Synthwave", "clip": "eval/assets/audio/synthwave.wav"},
+    {"id": "jungle-drums", "title": "Jungle drums", "clip": "eval/assets/audio/jungle-drums.wav"},
+    {"id": "classical-strings", "title": "Classical strings", "clip": "eval/assets/audio/classical-strings.wav"},
+    {"id": "ambient-electronica", "title": "Ambient electronica", "clip": "eval/assets/audio/ambient-electronica.wav"}
+  ],
+  "table_photos": [
+    "eval/assets/tables/table-a.jpg",
+    "eval/assets/tables/table-b.jpg"
+  ]
+}

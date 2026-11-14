@@ -1,0 +1,9 @@
+{
+  "id": "w-00000004",
+  "world": {"name": "Kingdom", "setting": "medieval kingdom", "mood": "heroic", "time_of_day": "morning", "weather": "clear skies", "palette": ["royal blue", "gold", "emerald"]},
+  "roles": [],
+  "terrain": {"open_space": "a green meadow", "under_table": "a dragon's cave"},
+  "restyle_prompt": "First-person, low through a sunlit kingdom meadow toward distant stone towers, banners stir in a clear morning breeze, painterly fantasy.",
+  "narration": "A new morning dawns over the kingdom.",
+  "music_signature": {"tempo_bpm": 104, "energy": 0.46, "brightness": 0.68, "chroma": [0.15, 0.05, 0.1, 0.05, 0.15, 0.05, 0.05, 0.1, 0.05, 0.15, 0.05, 0.05]}
+}
