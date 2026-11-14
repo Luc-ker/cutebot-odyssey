@@ -1,0 +1,123 @@
+{
+ "name": "object_moved",
+ "duration_s": 12,
+ "hz": 10,
+ "description": "The cup is slid across the table at 3-6 s, keeping id 3; the book is lifted (hidden) at 8-9.5 s and put back.",
+ "objects": [
+  {
+   "id": 1,
+   "cls": "chair",
+   "size": [
+    0.14,
+    0.18
+   ],
+   "path": [
+    [
+     0,
+     [
+      0.22,
+      0.3
+     ]
+    ]
+   ]
+  },
+  {
+   "id": 2,
+   "cls": "bottle",
+   "size": [
+    0.05,
+    0.05
+   ],
+   "path": [
+    [
+     0,
+     [
+      0.7,
+      0.25
+     ]
+    ]
+   ]
+  },
+  {
+   "id": 3,
+   "cls": "cup",
+   "size": [
+    0.06,
+    0.06
+   ],
+   "path": [
+    [
+     0,
+     [
+      0.6,
+      0.7
+     ]
+    ],
+    [
+     3,
+     [
+      0.6,
+      0.7
+     ]
+    ],
+    [
+     6,
+     [
+      0.85,
+      0.3
+     ]
+    ]
+   ]
+  },
+  {
+   "id": 4,
+   "cls": "book",
+   "size": [
+    0.16,
+    0.11
+   ],
+   "path": [
+    [
+     0,
+     [
+      0.3,
+      0.75
+     ]
+    ]
+   ],
+   "appear": 0,
+   "remove": 8
+  },
+  {
+   "id": 4,
+   "cls": "book",
+   "size": [
+    0.16,
+    0.11
+   ],
+   "path": [
+    [
+     0,
+     [
+      0.32,
+      0.74
+     ]
+    ]
+   ],
+   "appear": 9.5
+  }
+ ],
+ "robot": {
+  "path": [
+   [
+    0,
+    [
+     0.5,
+     0.5
+    ]
+   ]
+  ],
+  "heading": -1.57
+ },
+ "giants": []
+}

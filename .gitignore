@@ -4,3 +4,5 @@ __pycache__/
 .pytest_cache/
 logs/
 node_modules/
+jetson/models/
+jetson/calibration.json
