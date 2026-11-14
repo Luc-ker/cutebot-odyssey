@@ -41,12 +41,16 @@ night village.
 One person plays the mouse exploring the world, another plays the giant reshaping it, and whoever holds the music
 controls reality.
 
+The current build uses the phone itself as its only camera and laptop compute. It requires no NVIDIA
+Jetson, Arduino, USB camera, Raspberry Pi 5, debug probe or crocodile clips. Physical reactions described
+above require an optional robot bridge; this two-board build provides vision, screen effects and narration.
+
 ## How we built it
 
 - **Robot and controller:** an ELECFREAKS Cutebot and joystick gamepad, both on micro:bits running MicroPython.
   The gamepad drives the robot directly over micro:bit radio, so driving never depends on wifi. The robot has a
-  radio failsafe, an ultrasonic safety stop and line-sensor edge detection. A third micro:bit on USB bridges
-  radio to the laptop for light effects, recoil and telemetry.
+  existing onboard controls. These two boards operate independently of the laptop. The optional USB bridge
+  integration for physical light effects, recoil and telemetry is not part of the current hardware build.
 - **The hub:** a small Python asyncio WebSocket pub/sub server on the laptop. Every part of the system publishes
   and subscribes to typed topics (`vision.state`, `audio.beat`, `world.current`...). We wrote shared contracts
   first, so 111 tickets could be built in parallel against stubs.
@@ -76,8 +80,8 @@ controls reality.
 - [Fill in from the day. Candidates:]
 - **Latency budget across three loops:** keeping beat → lights under 100 ms while the world loop takes seconds,
   and making a world change feel like one deliberate moment (a timed transition) instead of a flicker.
-- **Radio contention:** the gamepad, the robot and the bridge share one micro:bit radio channel. We benchmarked
-  packet loss at different rates and capped light commands.
+- **Independent control:** the existing gamepad and robot use radio. The laptop uses the phone camera
+  without requiring a USB bridge or changing the working micro:bit setup.
 - **Object identity from a moving camera:** every object leaves the view whenever the robot turns, and there's
   no map to say where it went; roles have to survive that, so objects are recognised again by appearance.
 - **Phone camera over HTTPS:** phone browsers only allow the camera on secure pages, so we had to run our own

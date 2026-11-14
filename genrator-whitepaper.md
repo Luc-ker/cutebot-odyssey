@@ -49,16 +49,22 @@ The DurHack 2026 theme is **Composition**. Genrator uses the word in three sense
 
 ## 5. Hardware
 
+**Current build:** two independently configured micro:bits (Cutebot + gamepad), phone as the only camera,
+and laptop compute. Keep the working micro:bit setup. NVIDIA Jetson, Arduino, USB camera, Raspberry Pi 5,
+debug probe and crocodile clips are removed. The USB bridge mentioned in optional features below is not
+part of this build. Without it, laptop beat/recoil commands do not reach the robot, and robot sensor data
+and gamepad buttons do not reach the laptop. Screen effects, vision, worlds and narration still run.
+
+See [the current running guide](docs/running.md) for setup. Physical reactions described below are design
+capabilities requiring the optional bridge integration; they are not promises of the independent build.
+
 | Component | Role in Genrator |
 |---|---|
 | **ELECFREAKS micro:bit Smart Cutebot** | The robot body. Two-wheel drive, onboard RGB lights, ultrasonic distance sensor and line sensors. Driven by a micro:bit. |
 | **micro:bit (on the Cutebot)** | Receives drive commands by radio, drives motors, controls the robot's lights, reports ultrasonic distance. |
 | **ELECFREAKS joystick gamepad** (with a micro:bit) | The handheld controller. Joystick for driving, coloured buttons for actions. Sends commands to the Cutebot by micro:bit radio. |
-| **Bridge micro:bit** (plugged into the laptop by USB) | Lets the software send commands to the robot (light effects, recoil manoeuvres) and receive sensor readings, over the same radio channel. |
 | **Phone mounted on the Cutebot** | The robot's eye and the only camera. Streams first-person video from its browser camera. Chosen because a USB webcam needs a host computer and the Cutebot is too small to carry one; the phone carries its own battery and wifi. |
-| **Raspberry Pi Debug Probe** | Development and debugging of the boards. |
 | **Rechargeable AA batteries** | Power for the Cutebot and the gamepad. |
-| **Crocodile clip leads and jumper wires** | Prototyping connections. |
 | **Laptop** | Hosts the hub and web pages, the vision service (object detection on the phone's frames), the audio pipeline, the music input and the calls to Gemini and the video model. |
 | **Screen** (the laptop, or a monitor) | The robot's-eye view. A second screen can show the status page for the team. |
 | **Speaker** | Narration and sound effects. |
@@ -85,7 +91,7 @@ The DurHack 2026 theme is **Composition**. Genrator uses the word in three sense
                                                    │
                                                    ▼
                                            Robot's-eye screen
-   [Gamepad] ──radio──► [Cutebot]  ◄──radio── [Bridge micro:bit] ◄── game logic (lights, recoil)
+   [Gamepad micro:bit] ──radio──► [Cutebot micro:bit]  (independent control)
 ```
 
 Three loops run side by side:
@@ -250,7 +256,7 @@ The multimodal heart of the project. One Gemini call takes several kinds of inpu
 The fast audio layer makes the world feel alive instantly, before Gemini has answered.
 
 - The robot's-eye view pulses subtly on each beat (brightness, glow or vignette).
-- The Cutebot's RGB lights flash in time with the beat, through the bridge micro:bit.
+- The Cutebot's RGB lights flash in time with the beat, through the optional bridge micro:bit (not connected in the current build).
 - Louder, more energetic music makes effects stronger; quiet music makes them calm.
 - When the music stops, the world stays but falls still and quiet.
 

@@ -1,5 +1,8 @@
 # Drive the Cutebot from a phone over Bluetooth
 
+This is an alternate firmware build, not needed for the existing two-micro:bit gamepad/Cutebot setup
+or for the phone acting as the camera. Keep your working board programs for the current build.
+
 With only one micro:bit (the one in the Cutebot), the phone talks to the robot directly over Bluetooth:
 
 ```

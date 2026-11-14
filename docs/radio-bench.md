@@ -3,6 +3,9 @@
 The gamepad (D packets, 25 Hz) and the bridge (L / R / V packets) share one micro:bit radio group and
 channel. This bench checks that light traffic from the laptop does not make driving laggy or lossy.
 
+This is an optional legacy bridge benchmark. It is not required for the current independent
+two-micro:bit build or for the phone camera. Do not reflash your working boards to run it.
+
 ## Setup
 1. Bridge micro:bit on the laptop USB, flashed with `firmware/bridge/main.py`.
 2. Spare micro:bit A flashed with `firmware/bench/echo.py` (stands in for the Cutebot).

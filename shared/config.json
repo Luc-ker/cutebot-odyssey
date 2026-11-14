@@ -3,7 +3,7 @@
     "HUB_PORT": "TCP port of the laptop hub (WebSocket /hub plus static web/ and shared/).",
     "TLS_CERT": "Path to a TLS certificate; with TLS_KEY set the hub serves HTTPS/WSS (the phone needs it for its camera). Empty = plain HTTP.",
     "TLS_KEY": "Path to the TLS private key matching TLS_CERT. Empty = plain HTTP.",
-    "RADIO_GROUP": "micro:bit radio group shared by gamepad, Cutebot and bridge (0-255).",
+    "RADIO_GROUP": "Existing gamepad/Cutebot radio group (0-255); optional legacy bridge must match. Laptop/phone video does not use radio.",
     "RADIO_CHANNEL": "micro:bit radio channel (0-83).",
     "DRIVE_HZ": "How often the gamepad sends a drive packet, per second.",
     "FAILSAFE_MS": "Cutebot stops its motors if no drive packet arrives for this many milliseconds.",

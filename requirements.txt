@@ -1,6 +1,9 @@
 websockets>=13
 jsonschema>=4.18
 pytest>=8
+sounddevice>=0.4
+# pyserial>=3.5  # only for the optional --bridge integration
 numpy>=1.24
 opencv-python-headless>=4.8
 # ultralytics  # object detector for the vision service (python -m vision); pulls in PyTorch, so it is optional for tests
+# google-genai  # optional Gemini world composition (requires GEMINI_API_KEY)

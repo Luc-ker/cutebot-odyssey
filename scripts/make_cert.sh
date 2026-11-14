@@ -80,7 +80,8 @@ Certificate for: ${NAMES[*]}
 
 Tell Genrator to use it (in the same terminal you start the launcher from):
   bash / Git Bash:  export GENRATOR_TLS_CERT="$OUT/genrator.pem" GENRATOR_TLS_KEY="$OUT/genrator-key.pem"
-  PowerShell:       \$env:GENRATOR_TLS_CERT="$OUT/genrator.pem"; \$env:GENRATOR_TLS_KEY="$OUT/genrator-key.pem"
+  Python CA trust:  export GENRATOR_TLS_CA="$OUT/rootCA.pem"
+  PowerShell:       \$env:GENRATOR_TLS_CA="$OUT/rootCA.pem"; \$env:GENRATOR_TLS_CERT="$OUT/genrator.pem"; \$env:GENRATOR_TLS_KEY="$OUT/genrator-key.pem"
 
 Then: python scripts/launch.py   (pages are now https://, the hub wss://)
 EOF

@@ -1,5 +1,13 @@
 # Shared contracts — Genrator
 
+> **Current hardware profile (2026-11-14):** two already configured micro:bits in Cutebot and handheld
+> gamepad handle driving independently. The phone itself is the only camera; laptop runs all compute.
+> No Jetson, Arduino, USB camera, Raspberry Pi 5, debug probe or crocodile clips are required.
+> USB bridge is optional (`launch.py --bridge`), off by default. No firmware changes are required for
+> camera streaming. Historical ticket instructions about removed hardware are superseded by
+> [the running guide](../docs/running.md) and [build guide](../docs/build.md).
+
+
 Source of truth for behaviour: `genrator-whitepaper.md` (§ numbers in tickets refer to it).
 One file = one ticket. Grouping by component: `tickets/Components.md`. Tickets are **not assigned**.
 

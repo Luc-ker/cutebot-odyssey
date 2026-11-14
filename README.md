@@ -9,8 +9,8 @@ Gemini listens to a few seconds of the music, looks at what the robot sees, and 
 shanty floods the table into an ocean, heavy metal turns it into a volcanic wasteland, a lullaby into a snowy
 night. Every real object the robot discovers gets a role in that world (the chair becomes a castle) and keeps
 it, because the vision service recognises each object again when the robot comes back to it. Hands reaching
-into the robot's view become giants, threats make the robot recoil, the robot's lights flash to the beat, and a
-narrator announces where you've arrived. Change the song and the same table becomes a different world.
+into the robot's view become giants. Optional bridge integration lets threats trigger recoil and lights
+flash to the beat, and a narrator announces where you've arrived. Change the song and the same table becomes a different world.
 
 Built at **DurHack 2026** for the theme *Composition*: musical composition sets the world, the arrangement of
 objects is the level, and the project itself composes a robot, a phone camera, object vision, a multimodal LLM,
@@ -20,8 +20,9 @@ a real-time video model and an audio pipeline into one experience.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -r requirements.txt sounddevice pyserial ultralytics
-python scripts/launch.py                                # hub + brain + serial bridge + vision
+pip install -r requirements.txt
+pip install ultralytics  # object detection on the laptop
+python scripts/launch.py                                # hub + brain + phone vision; no USB bridge
 ```
 
 Full instructions: [docs/running.md](docs/running.md). Network, HTTPS and phone setup:
@@ -31,9 +32,14 @@ Full instructions: [docs/running.md](docs/running.md). Network, HTTPS and phone 
 Then open the phone page on the phone mounted on the robot and the eye page on the laptop (the launcher prints
 both URLs). The eye page passes the phone's frames to the vision service, so it must stay open.
 
-**Driving from a phone (one micro:bit, Bluetooth):** put `firmware/makecode/cutebot_bluetooth.ts` on the
-Cutebot's micro:bit with MakeCode and open `/pad/` in Chrome on an Android phone. Steps:
-[firmware/makecode/README.md](firmware/makecode/README.md).
+**Current hardware:** two already configured micro:bits, one in the Cutebot and one in the handheld
+controller. Leave their independent driving setup alone. The phone **is the only camera**; the laptop does
+all processing. NVIDIA Jetson, Arduino, USB camera, Raspberry Pi 5, debug probe and crocodile clips are not
+needed. Start with [the phone-as-camera steps](docs/running.md#connect-the-phone-as-the-camera).
+
+The laptop has no robot link by default: camera vision, worlds, screen effects and narration run there,
+while physical driving stays independent. Robot commands and sensor telemetry need the optional bridge
+integration described in [the running guide](docs/running.md#independent-robot-control).
 
 Tests: `python -m pytest` (Python) and `npm test` (web, Node 22+).
 
@@ -43,7 +49,7 @@ Tests: `python -m pytest` (Python) and `npm test` (web, Node 22+).
              ┌──────────── Music (phone, speaker, humming) ────────────┐
              ▼                                                          │
    [Microphone] ──► Audio pipeline (laptop)                             │
-                     ├─ Fast layer: beat, tempo, loudness, energy ──────┼──► world pulses, robot lights
+                     ├─ Fast layer: beat, tempo, loudness, energy ──────┼──► world pulses (robot lights require optional bridge)
                      └─ Slow layer: 5–10 s audio clip ──┐               │
                                                         ▼               │
    [Phone on Cutebot] ──WebRTC──► Eye page (laptop) ──► Video model (restyled) ──► Robot's-eye screen
@@ -55,21 +61,21 @@ Tests: `python -m pytest` (Python) and `npm test` (web, Node 22+).
                                                                                             ├─► Restyle prompt ──► Video model
                                                                                             └─► Narration ──► Text-to-speech ──► Speaker
 
-   [Gamepad] ──radio──► [Cutebot]  ◄──radio── [Bridge micro:bit] ◄── game logic (lights, recoil)
+   [Gamepad micro:bit] ──radio──► [Cutebot micro:bit]  (existing independent setup)
 ```
 
 Three loops run side by side: the **control loop** (gamepad → robot by micro:bit radio, milliseconds, no
-network), the **rhythm loop** (beat and energy → lights and pulses, local, tens of milliseconds) and the
+network), the **rhythm loop** (beat and energy → screen pulses, local, tens of milliseconds) and the
 **world loop** (Gemini recomposes the world every few seconds when the music changes).
 
 | Folder | What |
 |---|---|
-| `firmware/` | MicroPython for the Cutebot, the gamepad and the USB bridge micro:bit |
+| `firmware/` | Existing Cutebot/gamepad firmware, plus optional legacy USB bridge and Bluetooth builds |
 | `server/` | Python 3.11 asyncio: the hub (WebSocket pub/sub + static files), the brain modules (audio, world memory, Gemini, narration), the serial bridge |
 | `vision/` | Vision on the robot's view, run on the laptop: detection, tracking, re-id by appearance, giants, snapshot |
 | `web/` | Browser pages, no build step: `phone/`, `eye/`, `sound/`, `status/` |
 | `shared/` | Config, roles vocabulary, schemas and fallback worlds read by both sides |
-| `docs/` | Runbooks and write-ups. [`genrator-whitepaper.md`](genrator-whitepaper.md) is the design |
+| `docs/` | Runbooks and write-ups. [`genrator-whitepaper.md`](genrator-whitepaper.md) describes the design and current hardware profile |
 | `tickets/` | The 111 tickets the build was split into ([components](tickets/Components.md), [contracts](tickets/CONTRACTS.md)) |
 
 ## Privacy

@@ -1,9 +1,9 @@
 """T96 — start the whole laptop side of Genrator with one command, stop it with Ctrl-C.
 
-    python scripts/launch.py                              # hub + brain + serial bridge + vision, live microphone
+    python scripts/launch.py                              # hub + brain + phone vision; independent robot/gamepad
     python scripts/launch.py --replay drive_around        # a recorded vision scene instead of the vision service
     python scripts/launch.py --audio-file song.wav        # play a file into the audio pipeline (no mic)
-    python scripts/launch.py --no-bridge                  # no USB micro:bit plugged in
+    python scripts/launch.py --bridge                     # optional legacy USB bridge (extra hardware)
     python scripts/launch.py --no-vision                  # don't start the vision service
     python scripts/launch.py --vision-camera 0            # vision from a camera on this laptop, not the phone
 
@@ -34,7 +34,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 HEALTH_TIMEOUT_S = 20.0
-PAGES = ["eye", "pad", "sound", "status", "phone"]
+PAGES = ["eye", "sound", "status", "phone"]
 COLOURS = {"hub": "36", "brain": "35", "bridge": "33", "vision": "32"}
 WIN = os.name == "nt"
 
@@ -81,7 +81,7 @@ def plan_services(args, config: dict) -> list[tuple[str, list[str], dict]]:
         replay = ROOT / "scripts" / "vision_replay.py"
         if not replay.is_file():
             raise SystemExit("--replay needs scripts/vision_replay.py (ticket T47), which is not in this checkout")
-        services.append(("vision", [py, str(replay), str(resolve_scene(args.replay)), "--loop"], {}))
+        services.append(("vision", [py, str(replay), str(resolve_scene(args.replay)), "--hub", hub_url(config)], {}))
     elif not args.no_vision:
         argv = [py, "-m", "vision"]
         if args.vision_camera is not None:
@@ -248,6 +248,14 @@ async def amain(args) -> int:
         print("\n  Pages (open on any device on the same network):")
         for page, url in page_urls(config, lan_ip()).items():
             print(f"    {page:7} {url}")
+        if args.no_bridge:
+            print("\n  Robot/gamepad: independent; no USB bridge is started.")
+            print("  Laptop robot lights/recoil/buttons/telemetry need the optional --bridge integration.")
+        if live_vision and args.vision_camera is None:
+            if not (config.get("TLS_CERT") and config.get("TLS_KEY")):
+                print("\n  PHONE CAMERA NEEDS HTTPS: follow docs/network.md before opening /phone/.")
+            print("  Phone: open /phone/, allow rear camera, keep the screen unlocked and page visible.")
+            print("  Laptop: keep /eye/ visible; it forwards camera frames to vision.")
         print("\n  Ctrl-C stops everything.\n", flush=True)
 
         async def watch():
@@ -276,7 +284,12 @@ def parse_args(argv=None):
     p = argparse.ArgumentParser(description="Start the laptop side of Genrator.")
     p.add_argument("--replay", metavar="SCENE", help="replay a recorded vision scene (scripts/scenes/<SCENE>.json)")
     p.add_argument("--audio-file", metavar="WAV", help="feed this audio file to the pipeline instead of the mic")
-    p.add_argument("--no-bridge", action="store_true", help="don't start the USB micro:bit serial bridge")
+    bridge = p.add_mutually_exclusive_group()
+    bridge.add_argument("--bridge", dest="no_bridge", action="store_false",
+                        help="start the optional USB micro:bit bridge (not needed for phone video)")
+    bridge.add_argument("--no-bridge", dest="no_bridge", action="store_true",
+                        help="skip the optional USB bridge (default; kept for compatibility)")
+    p.set_defaults(no_bridge=True)
     p.add_argument("--no-vision", action="store_true", help="don't start the vision service (python -m vision)")
     p.add_argument("--vision-camera", metavar="INDEX", default=None,
                    help="vision reads this camera on the laptop instead of the phone's frames (testing)")

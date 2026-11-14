@@ -4,10 +4,16 @@ Everything here is hand work. Budget about an hour for two people. The phone on 
 (T111): there is no overhead camera, no rig and no marker to build. Fill in the **Record** boxes as you go and
 add photos to `hardware/photos/` (phone photos, resized to ~1600 px).
 
+The current build uses laptop compute and the phone camera. NVIDIA Jetson, Arduino, USB camera,
+Raspberry Pi 5, debug probe and crocodile clips are removed from the build. The Cutebot uses its
+onboard connectors. The two micro:bits already handle the robot and handheld controller independently;
+leave their setup alone. No micro:bit needs to be connected to the laptop for phone video.
+
 ## Shopping and parts list
 
 | Have | Item | For |
 |---|---|---|
+| ☐ | Existing handheld gamepad with its configured micro:bit | independent controller |
 | ☐ | Cutebot with micro:bit, fresh rechargeable AA batteries + a second charged set | robot |
 | ☐ | The robot phone + a short USB cable and power bank (charge between runs) | robot's eye |
 | ☐ | Stiff corrugated cardboard (a delivery box), ~30 × 20 cm | mount |
@@ -69,8 +75,7 @@ The line sensors (T14) stop the robot from driving off the table when they see t
 3. Stick a band **2–3 cm wide** (two strips side by side) all the way around the play area, **3–5 cm inside** the
    real edge, so the robot can stop in time. Press it flat; no wrinkles or gaps at the corners (overlap them).
 4. **Test each sensor:** hold the robot by hand with its line sensors over the tape, then over bare table. On the
-   Cutebot, the sensor LEDs underneath change (or check `robot.telemetry` `line` on the status page: `[1, 1]`
-   over tape). If they read inverted, flip `EDGE_VALUE`.
+   Cutebot, the sensor LEDs underneath change (the laptop does not receive `robot.telemetry` in this independent build). If they read inverted, flip `EDGE_VALUE`.
 5. **Drive test:** drive slowly towards the edge at 5 points around the table (each side and a corner). It must
    stop on the tape every time. Then try at full speed. If it overshoots, widen the band or move it further in.
 

@@ -1,5 +1,13 @@
 # Components → tickets
 
+> **Current hardware profile (2026-11-14):** two already configured micro:bits in Cutebot and handheld
+> gamepad handle driving independently. The phone itself is the only camera; laptop runs all compute.
+> No Jetson, Arduino, USB camera, Raspberry Pi 5, debug probe or crocodile clips are required.
+> USB bridge is optional (`launch.py --bridge`), off by default. No firmware changes are required for
+> camera streaming. Historical ticket instructions about removed hardware are superseded by
+> [the running guide](../docs/running.md) and [build guide](../docs/build.md).
+
+
 Which tickets belong to which component of **Genrator** (`genrator-whitepaper.md`).
 Shared contracts every ticket codes to: `tickets/CONTRACTS.md`. Tickets are **not assigned**.
 

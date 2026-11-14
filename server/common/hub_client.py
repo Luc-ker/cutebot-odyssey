@@ -14,6 +14,8 @@ import asyncio
 import inspect
 import json
 import logging
+import os
+import ssl
 import time
 from typing import Any, Awaitable, Callable
 
@@ -34,6 +36,11 @@ def topic_matches(pattern: str, topic: str) -> bool:
 class HubClient:
     def __init__(self, url: str, src: str, min_delay: float = 0.5, max_delay: float = 5.0):
         self.url = url
+        self._ssl = None
+        ca = os.environ.get("GENRATOR_TLS_CA")
+        if url.startswith("wss://") and ca:
+            self._ssl = ssl.create_default_context()
+            self._ssl.load_verify_locations(cafile=ca)
         self.src = src
         self.min_delay = min_delay
         self.max_delay = max_delay
@@ -134,7 +141,8 @@ class HubClient:
         first = True
         while not self._closing:
             try:
-                async with websockets.connect(self.url, max_size=8 * 1024 * 1024) as ws:
+                tls = {"ssl": self._ssl} if self._ssl is not None else {}
+                async with websockets.connect(self.url, max_size=8 * 1024 * 1024, **tls) as ws:
                     self._ws = ws
                     delay = self.min_delay
                     await self._send_sub(list(self._handlers))

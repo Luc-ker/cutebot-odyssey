@@ -169,3 +169,46 @@ def test_unsubscribe():
         await a.close()
         await hub.stop()
     run(main())
+
+
+def test_custom_local_ca_connects_to_real_tls_hub(tmp_path, monkeypatch):
+    import shutil
+    import ssl
+    import subprocess
+
+    openssl = shutil.which("openssl")
+    if not openssl:
+        pytest.skip("openssl is needed to issue a temporary local test certificate")
+    cert, key = tmp_path / "cert.pem", tmp_path / "key.pem"
+    conf = tmp_path / "openssl.cnf"
+    conf.write_text("[req]\nprompt=no\ndistinguished_name=dn\nx509_extensions=ext\n"
+                    "[dn]\nCN=localhost\n[ext]\nbasicConstraints=critical,CA:TRUE\n"
+                    "subjectAltName=DNS:localhost,IP:127.0.0.1\n")
+    subprocess.run([openssl, "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1",
+                    "-config", str(conf), "-keyout", str(key), "-out", str(cert)],
+                   check=True, capture_output=True)
+    monkeypatch.setenv("GENRATOR_TLS_CA", str(cert))
+
+    async def main():
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.load_cert_chain(cert, key)
+        hub = MiniHub()
+        hub.server = await serve(hub.handler, "127.0.0.1", 0, ssl=ctx)
+        port = next(iter(hub.server.sockets)).getsockname()[1]
+        client = None
+        try:
+            client = await HubClient.connect(f"wss://127.0.0.1:{port}/hub", "tls-test", timeout=2)
+            assert client._ssl.check_hostname
+            assert client._ssl.verify_mode == ssl.CERT_REQUIRED
+            assert len(client._ssl.get_ca_certs()) >= len(ssl.create_default_context().get_ca_certs())
+            received = asyncio.Queue()
+            client.sub("camera.test", received.put)
+            await hub.wait_subs(1)
+            await client.pub("camera.test", {"frame": "phone"})
+            env = await asyncio.wait_for(received.get(), 2)
+            assert env["data"] == {"frame": "phone"}
+        finally:
+            if client:
+                await client.close()
+            await hub.stop()
+    run(main())

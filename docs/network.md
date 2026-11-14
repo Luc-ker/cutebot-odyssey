@@ -8,11 +8,12 @@ the demo still runs if the venue wifi dies. Follow it top to bottom. It takes ab
   ┌────────────────┐   wss://192.168.137.1:8765   ┌──────────────┐
   │ Laptop         │ ◄──────────────────────────── │ Phone on bot │  camera page /phone/
   │ hub :8765      │                               └──────────────┘
-  │ brain, bridge  │
+  │ brain          │
   │ vision (:8080, │ ──── internet (optional) ───► Gemini, video model
   │  this machine) │
   └────────────────┘
-  Gamepad ⇄ Cutebot ⇄ bridge micro:bit: micro:bit radio, never the network.
+  Gamepad micro:bit ⇄ Cutebot micro:bit: existing independent radio control.
+  No USB bridge or separate camera is required.
 ```
 
 ## 1. Make our own network
@@ -35,8 +36,8 @@ laptop's IP changes:
 
 1. Install mkcert: `winget install FiloSottile.mkcert` (macOS `brew install mkcert`).
 2. In Git Bash, from the repo: `bash scripts/make_cert.sh`. Accept the "install certificate" dialog.
-3. Copy the two `GENRATOR_TLS_CERT` / `GENRATOR_TLS_KEY` lines it prints and run them in the terminal you
-   launch from (or put the two paths in `TLS_CERT` / `TLS_KEY` in `shared/config.json` locally; don't commit them).
+3. Copy the `GENRATOR_TLS_CERT`, `GENRATOR_TLS_KEY` and `GENRATOR_TLS_CA` settings it prints and run them in
+   the terminal you launch from (or put the two paths in `TLS_CERT` / `TLS_KEY` in `shared/config.json` locally; don't commit them).
 
 ### Trust the certificate on the phone (once per phone)
 
@@ -45,7 +46,7 @@ Run `bash scripts/make_cert.sh --serve`. It prints a URL like `http://192.168.13
 - **Android (Chrome):** open the URL and download the file. Settings → Security & privacy → More security
   settings → Encryption & credentials → **Install a certificate** → **CA certificate** → Install anyway →
   pick `genrator-rootCA.crt`. (Menu names vary a little by brand; search settings for "CA certificate".)
-- **iPhone (Safari only):** open the URL → Allow the profile download. Settings → **Profile Downloaded** →
+- **iPhone (Safari):** open the URL → Allow the profile download. Settings → **Profile Downloaded** →
   Install. Then Settings → General → About → **Certificate Trust Settings** → turn on full trust for
   "mkcert ...".
 
@@ -65,8 +66,17 @@ Proceed. The camera usually works after that. Trusting the CA is more reliable, 
 
 ## 4. Start and check every link
 
-1. `python scripts/launch.py`.
-2. Tick each one:
+1. Join the laptop and camera phone to the same local network. Trust the HTTPS certificate as above.
+2. `python scripts/launch.py` from the terminal containing the TLS environment variables.
+3. On the laptop open the printed `/eye/` URL and keep the tab visible.
+4. On the mounted phone open the printed `https://<laptop-IP>:8765/phone/` URL, allow camera access,
+   and keep the rear camera facing forward. The phone should say **STREAMING** once the eye connects.
+   Keep this page visible: switching apps or locking the phone can suspend the camera. The phone does
+   not need a USB camera app, USB cable to the laptop, or Bluetooth for video.
+   The phone itself is the camera; do not connect it to another camera.
+5. On the laptop open `/sound/` and click **Start sound**. Check `/status/` using the table below.
+
+Tick each link:
 
 | ✓ | Link | How to check |
 |---|---|---|
@@ -76,11 +86,12 @@ Proceed. The camera usually works after that. Trusting the CA is more reliable, 
 | ☐ | Eye page gets video | `/eye/` on the main screen shows the robot's view; status page shows `video.status` |
 | ☐ | Vision sees | status page: `vision` service ok, `vision.state` at ~10 msg/s; put a cup in front of the robot and the HUD names it |
 | ☐ | Snapshot | on the laptop, open `http://127.0.0.1:8080/snapshot.jpg`: you see the robot's view, people blurred |
-| ☐ | Bridge micro:bit | status page: `serial_bridge` ok; `robot.telemetry` ~10 msg/s with the robot on |
+| ☐ | Existing robot/gamepad | driving works independently; no USB bridge health or robot telemetry is expected on the laptop |
 | ☐ | Internet | status page: `brain.scheduler` ok, a world arrives a few seconds after music starts |
 
+Python hub clients use the public CA path in `GENRATOR_TLS_CA`, in addition to their normal trusted roots.
 The vision service connects to the hub as `wss://127.0.0.1:8765/hub` when TLS is on; `make_cert.sh` includes
-`127.0.0.1` in the certificate and mkcert's CA is in the system store, so it works as is.
+`127.0.0.1` in the certificate and `GENRATOR_TLS_CA` lets Python verify it.
 
 ## 5. When the venue wifi fails
 
@@ -89,8 +100,8 @@ The laptop hotspot keeps the local network up even without internet, so only the
 | Still works | Stops |
 |---|---|
 | Driving (radio, no network at all) | Gemini composing new worlds; new objects get roles from the local picker instead of Gemini |
-| Beat → lights and visual pulses (local) | AI restyling of the robot view: the eye page falls back to the raw camera with a world tint and role labels |
-| Vision (objects, giants), threats and recoil: all on the laptop | |
+| Beat → visual pulses (local); robot lights need optional bridge integration | AI restyling of the robot view: the eye page falls back to the raw camera with a world tint and role labels |
+| Vision (objects, giants), visual threats and narration on the laptop; physical recoil needs optional bridge integration | |
 | Fallback worlds: status page → world buttons | |
 | Narration and sounds (browser speech on the laptop) | |
 
