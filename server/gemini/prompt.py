@@ -37,8 +37,8 @@ def build_compose_parts(audio_wav: bytes, image_jpeg: bytes, objects: list,
         obj = _mapping(item)
         object_id = obj.get("id", obj.get("object_id", "?"))
         cls = obj.get("cls", obj.get("class", "object"))
-        pos = obj.get("pos", obj.get("position", []))
-        object_lines.append(f"- id={object_id}; class={cls}; position={json.dumps(pos, separators=(',', ':'))}")
+        where = "in view" if obj.get("visible", True) else "seen earlier, out of view now"
+        object_lines.append(f"- id={object_id}; class={cls}; {where}")
     role_lines = [
         f"- {entry['role']}: {entry.get('behaviour', 'neutral')}"
         for entry in (vocab or [])
@@ -47,7 +47,7 @@ def build_compose_parts(audio_wav: bytes, image_jpeg: bytes, objects: list,
     text = "\n".join((
         rules,
         f"Current world (keep it unless the music clearly implies a different world): {_world_summary(current_world)}",
-        "Tracked objects (assign exactly one role to each id):",
+        "Objects the robot has discovered (assign exactly one role to each id):",
         "\n".join(object_lines) or "(none)",
         "Allowed roles and behaviours (use only these role names):",
         "\n".join(role_lines) or "(none)",

@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "dragon" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M8 52c4-12 14-16 22-16 4-8 2-16-4-22 8 0 14 6 16 14l8-4-2 8 6 2-8 4c0 10-8 18-22 18-6 0-12-2-16-4Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M30 34C24 24 14 20 4 22c6 4 8 10 10 14 4-4 10-4 16-2Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="44" cy="26" r="2" fill="#d8402f"/>
-<path d="M50 30c4 0 8 2 10 4" stroke="#f2a03d" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M20 52l-2 6M30 54l-1 6" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-</svg>

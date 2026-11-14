@@ -3,6 +3,8 @@
 // The raw phone feed always plays underneath, so a failing restyler still leaves a picture.
 // Publishes `video.status {mode, latency_ms}` every second. Keys: F fullscreen, R force raw.
 // Overlays (HUD T32, fallback T33, pulse T34, giant T35) load as optional modules.
+// The raw feed is also sampled at VISION_HZ and sent to the vision service on `camera.frame` (frames.js):
+// the phone's view is the only camera, so this page must be open for objects and giants to be seen.
 
 import { connectHub } from "../common/hub.js";
 import { receivePhoneStream, onStream } from "./receiver.js";
@@ -46,6 +48,8 @@ async function main() {
     optional("./fallback.js", "mountFallback", $("slot-fallback"), hub, restyler),
     optional("./giant.js", "mountGiant", $("slot-giant"), hub),
     optional("./hud.js", "mountHud", $("slot-hud"), hub),
+    optional("./frames.js", "startFrameSender", hub, rawVideo,
+      { hz: config.VISION_HZ, width: config.FRAME_WIDTH }),
   ]);
 
   // ---- mode: restyled or raw ----------------------------------------------------------------

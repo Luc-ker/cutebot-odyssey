@@ -1,6 +1,7 @@
 """T52 — Object clustering into places.
 
-Several objects close together read as one place (three cups become a village).
+Several objects close together in the robot's view read as one place (three cups
+become a village). Only objects in view are grouped, in view units.
 
 Contract (C7)::
 
@@ -8,7 +9,8 @@ Contract (C7)::
 
 * Single-linkage grouping: two objects link when the gap between their
   footprints (axis-aligned boxes from ``pos``/``size``) is at most ``max_gap``
-  (table units, i.e. ``config.CLUSTER_GAP``). A cluster needs at least 3 members.
+  (view units, i.e. ``config.CLUSTER_GAP``). A cluster needs at least 3 members.
+* ``pos`` is the members' mean centre and ``size`` the [w, h] of the box around them all.
 * Cluster ids are ints from ``CLUSTER_ID_BASE + 1`` upwards so they never collide
   with tracker ids; facing (T56) and ``robot.state.facing_id`` can carry them.
 * An id stays while the membership overlaps a recent cluster's by more than half.
@@ -48,10 +50,11 @@ class Cluster:
     pos: list
     role: str | None = None
     name: str | None = None
+    size: list = field(default_factory=lambda: [0.0, 0.0])
     extra: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
-        return {"id": self.id, "pos": self.pos, "member_ids": self.member_ids,
+        return {"id": self.id, "pos": self.pos, "size": self.size, "member_ids": self.member_ids,
                 "role": self.role, "name": self.name}
 
 
@@ -66,6 +69,17 @@ def _gap(a, b) -> float:
     dx = max(0.0, abs(ax - bx) - (aw + bw) / 2)
     dy = max(0.0, abs(ay - by) - (ah + bh) / 2)
     return math.hypot(dx, dy)
+
+
+def _extent(members) -> list:
+    """[w, h] of the box around every member's footprint."""
+    x0 = y0 = math.inf
+    x1 = y1 = -math.inf
+    for o in members:
+        (x, y), (w, h) = _get(o, "pos"), (_get(o, "size") or [0, 0])[:2]
+        x0, x1 = min(x0, x - w / 2), max(x1, x + w / 2)
+        y0, y1 = min(y0, y - h / 2), max(y1, y + h / 2)
+    return [min(1.0, max(0.0, x1 - x0)), min(1.0, max(0.0, y1 - y0))]
 
 
 def group(objects, max_gap) -> list[list]:
@@ -117,7 +131,7 @@ class ClusterTracker:
             used.add(best_id)
             pos = [sum(_get(o, "pos")[0] for o in members) / len(members),
                    sum(_get(o, "pos")[1] for o in members) / len(members)]
-            out.append(Cluster(id=best_id, member_ids=sorted(ids), pos=pos))
+            out.append(Cluster(id=best_id, member_ids=sorted(ids), pos=pos, size=_extent(members)))
         # history: current clusters newest, older (vanished) ones kept for a while
         current = {c.id: frozenset(c.member_ids) for c in out}
         self._history = [(cid, m) for cid, m in self._history if cid not in current][-HISTORY:]

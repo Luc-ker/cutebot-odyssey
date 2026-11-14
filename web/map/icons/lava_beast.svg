@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "lava_beast" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M12 56c-4-12 0-28 8-34 2-8 22-8 24 0 8 6 12 22 8 34Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M12 36c-6 2-8 8-6 14M52 36c6 2 8 8 6 14" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M22 30l4 6M42 30l-4 6M26 46l6-4 6 4M24 22l4 4" stroke="#f2a03d" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-<circle cx="26" cy="28" r="2.5" fill="#ffe08a"/><circle cx="38" cy="28" r="2.5" fill="#ffe08a"/>
-</svg>

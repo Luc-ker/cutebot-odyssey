@@ -102,7 +102,7 @@ async def ask_json(parts: list, schema: dict) -> dict:
 
 async def compose_world(audio_wav: bytes, image_jpeg: bytes, objects: list,
                         current_world: dict | None) -> dict:
-    """Compose a raw world response from the audio clip, table image and tracked objects."""
+    """Compose a raw world response from the audio clip, robot's-view image and discovered objects."""
     from server.world.fallback_roles import load_vocab
 
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))

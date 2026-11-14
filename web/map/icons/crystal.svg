@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "crystal" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M26 56 20 30l8-18 8 18-4 26Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M38 56l-4-18 8-14 8 14-4 18Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M14 56l-4-12 5-8 6 8-1 12Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M28 12v44M42 24v32" stroke="#fff4dc" stroke-width="2" opacity=".8"/>
-</svg>

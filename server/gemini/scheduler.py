@@ -39,7 +39,8 @@ def _object_dict(obj: Any) -> dict:
 
 
 async def _fetch_snapshot(config: dict) -> bytes:
-    url = f"http://{config.get('JETSON_HOST', 'jetson.local')}:{int(config.get('JETSON_HTTP_PORT', 8080))}/snapshot.jpg"
+    """The robot's current view from the vision service (people blurred)."""
+    url = f"http://{config.get('VISION_HOST', '127.0.0.1')}:{int(config.get('VISION_HTTP_PORT', 8080))}/snapshot.jpg"
 
     def fetch():
         with urllib.request.urlopen(url, timeout=4) as response:

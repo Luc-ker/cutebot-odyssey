@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "river" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M20 4c-8 10 14 16 6 26S8 44 16 60h18c-8-14 12-20 14-30S34 12 38 4Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M28 16c2 2 4 2 6 0M22 38c2 2 4 2 6 0M28 50c2 2 4 2 6 0" stroke="#fff4dc" stroke-width="2" fill="none" stroke-linecap="round"/>
-</svg>

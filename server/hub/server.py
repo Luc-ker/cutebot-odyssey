@@ -5,8 +5,11 @@
   including the sender only if it subscribed. `data` is never changed.
 - `web/` is served at `/`, `shared/` at `/shared/`.
 - Every client has its own outbound queue and writer task, so a slow client never blocks the others.
-  High-rate topics (`vision.*`, `audio.*`, `robot.state`, `world.objects`) drop the oldest queued message
-  when that client falls behind; everything else (`world.event`, `narration.*`, ...) is never dropped.
+  High-rate topics (`vision.*`, `audio.*`, `camera.*`, `robot.state`, `world.objects`) drop the oldest queued
+  message when that client falls behind; everything else (`world.event`, `narration.*`, ...) is never dropped.
+- Bulk topics (`camera.*`, the phone's frames as JPEG) only reach clients that subscribe to them by a
+  pattern naming them, such as `camera.frame` or `camera.*`. A catch-all like `*` does not get them, so the
+  status page doesn't download video it never shows.
   A client whose reliable backlog exceeds `RELIABLE_MAX` is considered dead and disconnected.
 """
 from __future__ import annotations
@@ -31,7 +34,8 @@ log = logging.getLogger("hub")
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HUB_PATH = "/hub"
-LOSSY_PREFIXES = ("vision.", "audio.")
+LOSSY_PREFIXES = ("vision.", "audio.", "camera.")
+BULK_PREFIXES = ("camera.",)
 LOSSY_TOPICS = {"robot.state", "world.objects"}
 LOSSY_MAX = 32          # queued high-rate messages per client before the oldest is dropped
 RELIABLE_MAX = 5000     # queued never-drop messages per client before the client is disconnected
@@ -44,7 +48,11 @@ def is_lossy(topic: str) -> bool:
 
 def topic_matches(pattern: str, topic: str) -> bool:
     if pattern.endswith("*"):
-        return topic.startswith(pattern[:-1])
+        prefix = pattern[:-1]
+        if not topic.startswith(prefix):
+            return False
+        # Bulk topics need a pattern that names their prefix: "camera.*" yes, "*" or "c*" no.
+        return not any(topic.startswith(b) and not prefix.startswith(b) for b in BULK_PREFIXES)
     return pattern == topic
 
 

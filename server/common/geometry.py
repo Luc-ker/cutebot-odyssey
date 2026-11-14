@@ -1,7 +1,7 @@
-"""Table geometry helpers (T06, contracts C1/C7).
+"""Geometry helpers (T06, contracts C1/C7).
 
-Table coordinates are normalised `[x, y]` with `0..1` on each axis, origin top-left, `y` down.
-Headings are radians, 0 along +x, clockwise positive (because y points down), range (-pi, pi].
+View coordinates are normalised `[x, y]` in the robot camera's frame, `0..1` on each axis, origin top-left,
+`y` down. Angles are radians; `angle_to` follows the same y-down convention (clockwise positive).
 """
 from __future__ import annotations
 
@@ -10,11 +10,8 @@ from typing import Sequence
 
 Point = Sequence[float]
 
-_table_cm: tuple[float, float] | None = None
-
-
 def dist(a: Point, b: Point) -> float:
-    """Euclidean distance in normalised table units."""
+    """Euclidean distance in normalised view units."""
     return math.hypot(b[0] - a[0], b[1] - a[1])
 
 
@@ -38,38 +35,18 @@ def angle_diff(a: float, b: float) -> float:
     return wrap_angle(a - b)
 
 
-def in_cone(origin: Point, heading: float, target: Point, half_angle: float, max_dist: float) -> bool:
-    """True when `target` is within `max_dist` of `origin` and within `half_angle` radians of `heading`."""
-    d = dist(origin, target)
-    if d > max_dist:
-        return False
-    if d == 0:
-        return True
-    return abs(angle_diff(angle_to(origin, target), heading)) <= half_angle
+def bearing(x: float, hfov_deg: float) -> float:
+    """Angle (radians) from straight ahead to a point at view x (0..1). Negative = left, positive = right.
+
+    Uses a pinhole camera with horizontal field of view `hfov_deg`, so the edges of the frame are at
+    ±hfov/2 and the centre is 0.
+    """
+    half = math.radians(hfov_deg) / 2
+    return math.atan((2 * float(x) - 1) * math.tan(half))
 
 
-def _table_size(cfg: dict | None) -> tuple[float, float]:
-    global _table_cm
-    if cfg is not None:
-        return float(cfg["TABLE_W_CM"]), float(cfg["TABLE_H_CM"])
-    if _table_cm is None:
-        from server.common.config import load_config
-
-        c = load_config()
-        _table_cm = (float(c["TABLE_W_CM"]), float(c["TABLE_H_CM"]))
-    return _table_cm
-
-
-def cm_to_units(cm: float, axis: str | int, cfg: dict | None = None) -> float:
-    """Convert centimetres along `axis` ("x"/0 or "y"/1) into normalised table units."""
-    w, h = _table_size(cfg)
-    if axis in ("x", 0):
-        return cm / w
-    if axis in ("y", 1):
-        return cm / h
-    raise ValueError(f"axis must be 'x' or 'y', not {axis!r}")
-
-
-def units_to_cm(units: float, axis: str | int, cfg: dict | None = None) -> float:
-    """Inverse of `cm_to_units`."""
-    return units * cm_to_units(1.0, axis, cfg) ** -1
+def view_size(size: Sequence[float] | None) -> float:
+    """How much of the view an object takes up: the larger of its width and height (0..1)."""
+    if not size:
+        return 0.0
+    return max(float(v) for v in size[:2])

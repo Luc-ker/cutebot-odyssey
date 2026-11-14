@@ -20,7 +20,7 @@ def validate_world_objects(data):
         return [e for e in validate_envelope(env) if "warning" not in e.lower()]
     assert set(data) == {"world_id", "objects", "clusters", "terrain"}
     for o in data["objects"]:
-        if set(o) != {"id", "cls", "pos", "size", "role", "name", "behaviour", "cluster_id", "from_sky"}:
+        if set(o) != {"id", "cls", "pos", "size", "visible", "role", "name", "behaviour", "cluster_id", "from_sky"}:
             errors.append(f"object keys {sorted(o)}")
         if not isinstance(o["id"], int) or len(o["pos"]) != 2 or len(o["size"]) != 2:
             errors.append("object types")
@@ -74,6 +74,24 @@ def test_clusters_and_cluster_ids():
     assert validate_world_objects(data) == []
 
 
+def test_out_of_view_objects_are_listed_but_not_clustered():
+    reg, mem, pub = make()
+    reg.update(vstate((1, (0.2, 0.2)), (2, (0.24, 0.2)), (3, (0.28, 0.2))), 0)
+    reg.update(vstate((1, (0.2, 0.2)), (2, (0.24, 0.2))), 5)  # 3 left the view
+    data = pub.snapshot(5)
+    by_id = {o["id"]: o for o in data["objects"]}
+    assert by_id[3]["visible"] is False and by_id[1]["visible"] is True
+    assert data["clusters"] == []  # only two in view: not a place any more
+    assert validate_world_objects(data) == []
+
+
+def test_cluster_size_spans_its_members():
+    reg, mem, pub = make()
+    reg.update(vstate((1, (0.2, 0.2)), (2, (0.24, 0.2)), (3, (0.28, 0.2))), 0)
+    c = pub.snapshot(0)["clusters"][0]
+    assert abs(c["size"][0] - 0.11) < 1e-9 and abs(c["size"][1] - 0.03) < 1e-9
+
+
 def test_recompute_at_most_2hz():
     calls = []
 
@@ -81,7 +99,7 @@ def test_recompute_at_most_2hz():
         calls.append(1)
         return []
 
-    reg, mem, pub = make(find_clusters=find, analyse=lambda objs, world: {"open_regions": []})
+    reg, mem, pub = make(find_clusters=find, analyse=lambda objs, world: {})
     for i in range(10):  # 1 s at 10 Hz
         pub.snapshot(i * 0.1)
     assert len(calls) == 2

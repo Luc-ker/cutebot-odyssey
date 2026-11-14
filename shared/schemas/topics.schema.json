@@ -14,7 +14,8 @@
         "$ref": "#/$defs/unit"
       },
       "minItems": 2,
-      "maxItems": 2
+      "maxItems": 2,
+      "description": "View units (C1): [x, y] in the robot camera's frame, 0..1 left to right and top to bottom."
     },
     "size": {
       "type": "array",
@@ -22,12 +23,8 @@
         "$ref": "#/$defs/unit"
       },
       "minItems": 2,
-      "maxItems": 2
-    },
-    "heading": {
-      "type": "number",
-      "minimum": -3.1416,
-      "maximum": 3.1416
+      "maxItems": 2,
+      "description": "View units (C1): [w, h] as fractions of the frame width and height."
     },
     "rgb": {
       "type": "array",
@@ -117,7 +114,6 @@
       "required": [
         "frame_ts",
         "objects",
-        "robot",
         "giants"
       ],
       "properties": {
@@ -155,32 +151,6 @@
             }
           }
         },
-        "robot": {
-          "anyOf": [
-            {
-              "type": "object",
-              "required": [
-                "pos",
-                "heading",
-                "seen"
-              ],
-              "properties": {
-                "pos": {
-                  "$ref": "#/$defs/pos"
-                },
-                "heading": {
-                  "$ref": "#/$defs/heading"
-                },
-                "seen": {
-                  "type": "boolean"
-                }
-              }
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "giants": {
           "type": "array",
           "items": {
@@ -214,6 +184,26 @@
               }
             }
           }
+        }
+      }
+    },
+    "camera.frame": {
+      "type": "object",
+      "required": [
+        "jpeg"
+      ],
+      "properties": {
+        "jpeg": {
+          "type": "string",
+          "minLength": 1
+        },
+        "w": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "h": {
+          "type": "integer",
+          "minimum": 1
         }
       }
     },
@@ -480,6 +470,7 @@
               "cls",
               "pos",
               "size",
+              "visible",
               "role",
               "name",
               "behaviour",
@@ -499,6 +490,9 @@
               },
               "size": {
                 "$ref": "#/$defs/size"
+              },
+              "visible": {
+                "type": "boolean"
               },
               "role": {
                 "anyOf": [
@@ -564,6 +558,9 @@
               "pos": {
                 "$ref": "#/$defs/pos"
               },
+              "size": {
+                "$ref": "#/$defs/size"
+              },
               "member_ids": {
                 "type": "array",
                 "items": {
@@ -608,37 +605,11 @@
     "robot.state": {
       "type": "object",
       "required": [
-        "pos",
-        "heading",
-        "seen",
         "distance_cm",
         "override",
         "facing_id"
       ],
       "properties": {
-        "pos": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/pos"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "heading": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/heading"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
-        "seen": {
-          "type": "boolean"
-        },
         "distance_cm": {
           "anyOf": [
             {
@@ -1193,14 +1164,6 @@
               "conf": 0.9
             }
           ],
-          "robot": {
-            "pos": [
-              0.5,
-              0.5
-            ],
-            "heading": 0.0,
-            "seen": true
-          },
           "giants": [
             {
               "id": "g1",
@@ -1216,6 +1179,16 @@
               "edge": "right"
             }
           ]
+        }
+      },
+      {
+        "topic": "camera.frame",
+        "ts": 1700000000.0,
+        "src": "eye",
+        "data": {
+          "jpeg": "/9j/4AAQSkZJRg==",
+          "w": 640,
+          "h": 360
         }
       },
       {
@@ -1346,7 +1319,8 @@
               "name": "Keep",
               "behaviour": "neutral",
               "cluster_id": null,
-              "from_sky": false
+              "from_sky": false,
+              "visible": true
             }
           ],
           "clusters": [
@@ -1373,12 +1347,6 @@
         "ts": 1700000000.0,
         "src": "test",
         "data": {
-          "pos": [
-            0.5,
-            0.5
-          ],
-          "heading": 1.0,
-          "seen": true,
           "distance_cm": 30.0,
           "override": false,
           "facing_id": 3
@@ -1512,14 +1480,6 @@
                 "conf": 0.9
               }
             ],
-            "robot": {
-              "pos": [
-                0.5,
-                0.5
-              ],
-              "heading": 0.0,
-              "seen": true
-            },
             "giants": [
               {
                 "id": "g1",
@@ -1539,51 +1499,27 @@
         }
       },
       {
-        "why": "robot pos outside 0-1",
+        "why": "camera.frame without jpeg",
         "env": {
-          "topic": "vision.state",
+          "topic": "camera.frame",
+          "ts": 1700000000.0,
+          "src": "eye",
+          "data": {
+            "w": 640,
+            "h": 360
+          }
+        }
+      },
+      {
+        "why": "robot.state facing_id not an integer",
+        "env": {
+          "topic": "robot.state",
           "ts": 1700000000.0,
           "src": "test",
           "data": {
-            "frame_ts": 1.0,
-            "objects": [
-              {
-                "id": 3,
-                "cls": "chair",
-                "pos": [
-                  0.2,
-                  0.3
-                ],
-                "size": [
-                  0.1,
-                  0.1
-                ],
-                "conf": 0.9
-              }
-            ],
-            "robot": {
-              "pos": [
-                0.5,
-                -0.1
-              ],
-              "heading": 0,
-              "seen": true
-            },
-            "giants": [
-              {
-                "id": "g1",
-                "kind": "hand",
-                "pos": [
-                  0.9,
-                  0.1
-                ],
-                "size": [
-                  0.2,
-                  0.2
-                ],
-                "edge": "right"
-              }
-            ]
+            "distance_cm": 30.0,
+            "override": false,
+            "facing_id": "chair"
           }
         }
       },

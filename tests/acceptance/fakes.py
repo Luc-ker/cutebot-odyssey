@@ -8,7 +8,7 @@ outside world is faked:
                           brightness, so the real music signature (T70) can tell them apart.
 * ``FakeGemini``         stands in for ``compose_world`` (T71) and ``request_role`` (T76): scripted worlds per
                           song, scripted or forced object roles, and ok / fail / timeout modes.
-* ``FakeSnapshotServer`` stands in for the Jetson's ``GET /snapshot.jpg`` (T45).
+* ``FakeSnapshotServer`` stands in for the vision service's ``GET /snapshot.jpg`` (T45).
 * ``FakeSerialDevice``   stands in for the bridge micro:bit's USB serial port (T22), with unplug / replug.
 * ``fake_speaker``       stands in for the sound page (T81): answers every ``narration.speak`` with
                           ``narration.done`` after a short "speaking" delay, so the narration queue keeps moving.
@@ -309,7 +309,7 @@ def make_scheduler(hub, config, **kw):
 
 
 class FakeSnapshotServer:
-    """``GET /snapshot.jpg`` like the Jetson (T45): a tiny JPEG-shaped body. Counts requests."""
+    """``GET /snapshot.jpg`` like the vision service (T45): a tiny JPEG-shaped body. Counts requests."""
 
     BODY = b"\xff\xd8\xff\xe0" + b"\x00" * 64 + b"\xff\xd9"
 
@@ -440,9 +440,8 @@ class _ErrorLog(logging.Handler):
 
 @dataclass
 class Scene:
-    """What the overhead camera currently sees; the harness publishes it as ``vision.state`` at 10 Hz."""
-    objects: dict = field(default_factory=dict)   # id -> {id, cls, pos, size, conf}
-    robot: dict | None = None                     # {pos, heading, seen} or None (not detected)
+    """What the robot's camera currently sees; the harness publishes it as ``vision.state`` at 10 Hz."""
+    objects: dict = field(default_factory=dict)   # id -> {id, cls, pos, size, conf}, view units
     giants: list = field(default_factory=list)
 
     def put(self, obj_id: int, cls: str, pos, size=(0.08, 0.08)):
@@ -456,11 +455,11 @@ class Scene:
 
     def state(self) -> dict:
         return {"frame_ts": time.time(), "objects": [dict(o) for o in self.objects.values()],
-                "robot": dict(self.robot) if self.robot else None, "giants": [dict(g) for g in self.giants]}
+                "giants": [dict(g) for g in self.giants]}
 
 
 class Harness:
-    """``async with Harness(config) as h:`` — a hub on a free port, a fake Jetson snapshot server
+    """``async with Harness(config) as h:`` — a hub on a free port, a fake vision snapshot server
     (``h.snapshot``; the config is pointed at it), a probe recording every message, a 10 Hz vision feeder,
     helpers to start modules and wait for messages, and an error collector."""
 
@@ -482,9 +481,9 @@ class Harness:
         self._errlog = _ErrorLog()
         logging.getLogger().addHandler(self._errlog)
 
-        # the Jetson's snapshot endpoint, so nothing ever tries to reach a real Jetson
+        # the vision service's snapshot endpoint, so nothing ever tries to reach a real one
         self.snapshot = await FakeSnapshotServer().start()
-        self.config.update(JETSON_HOST="127.0.0.1", JETSON_HTTP_PORT=self.snapshot.port)
+        self.config.update(VISION_HOST="127.0.0.1", VISION_HTTP_PORT=self.snapshot.port)
 
         self.hub = HubServer()
         await self.hub.start("127.0.0.1", 0)

@@ -1,14 +1,19 @@
 """T96 — start the whole laptop side of Genrator with one command, stop it with Ctrl-C.
 
-    python scripts/launch.py                              # hub + brain + serial bridge, live microphone
-    python scripts/launch.py --replay robot_loop          # + recorded vision scene instead of the Jetson
+    python scripts/launch.py                              # hub + brain + serial bridge + vision, live microphone
+    python scripts/launch.py --replay drive_around        # a recorded vision scene instead of the vision service
     python scripts/launch.py --audio-file song.wav        # play a file into the audio pipeline (no mic)
     python scripts/launch.py --no-bridge                  # no USB micro:bit plugged in
-    python scripts/launch.py --jetson                     # also start the Jetson vision service over SSH
+    python scripts/launch.py --no-vision                  # don't start the vision service
+    python scripts/launch.py --vision-camera 0            # vision from a camera on this laptop, not the phone
 
 Every service runs as a subprocess with its output prefixed (``[hub]``, ``[brain]`` ...). The launcher
 waits up to 20 s for each one to report ``system.health ok`` (vision counts as healthy once a
 ``vision.state`` arrives), prints the page URLs, then keeps running until Ctrl-C, which stops everything.
+
+The vision service only sees what the phone sees, and the phone's frames reach it through the eye page, so
+vision reports "not ok" until the phone is streaming and the eye page is open. The launcher says so instead
+of waiting the full timeout for it.
 See docs/running.md.
 """
 from __future__ import annotations
@@ -29,13 +34,13 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 HEALTH_TIMEOUT_S = 20.0
-PAGES = ["eye", "map", "sound", "status", "phone"]
-COLOURS = {"hub": "36", "brain": "35", "bridge": "33", "vision": "32", "jetson": "32"}
+PAGES = ["eye", "pad", "sound", "status", "phone"]
+COLOURS = {"hub": "36", "brain": "35", "bridge": "33", "vision": "32"}
 WIN = os.name == "nt"
 
 
 def lan_ip() -> str:
-    """The laptop's address on the local network (the one the phone and Jetson should use)."""
+    """The laptop's address on the local network (the one the phone should use)."""
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.connect(("10.255.255.255", 1))  # no packet is sent; this only picks the outgoing interface
@@ -77,20 +82,23 @@ def plan_services(args, config: dict) -> list[tuple[str, list[str], dict]]:
         if not replay.is_file():
             raise SystemExit("--replay needs scripts/vision_replay.py (ticket T47), which is not in this checkout")
         services.append(("vision", [py, str(replay), str(resolve_scene(args.replay)), "--loop"], {}))
-    if args.jetson:
-        url = hub_url(config, lan_ip())
-        remote = (f"cd {args.jetson_dir} && python3 jetson/main.py --hub {url}")
-        services.append(("jetson", ["ssh", "-tt", args.jetson_user + "@" + config["JETSON_HOST"]
-                                    if args.jetson_user else config["JETSON_HOST"], remote], {}))
+    elif not args.no_vision:
+        argv = [py, "-m", "vision"]
+        if args.vision_camera is not None:
+            argv += ["--camera", str(args.vision_camera)]
+        services.append(("vision", argv, {}))
     return services
 
 
-def expected_health(names: list[str]) -> dict[str, str]:
-    """service name in system.health -> launcher service it belongs to."""
+def expected_health(names: list[str], live_vision: bool = False) -> dict[str, str]:
+    """service name in system.health -> launcher service it belongs to.
+
+    A replayed scene publishes vision.state at once, so it is waited for. The live vision service can't be
+    healthy until the phone streams and the eye page is open, which happens after launch, so it isn't."""
     want = {"hub": "hub", "brain": "brain"}
     if "bridge" in names:
         want["serial_bridge"] = "bridge"
-    if "vision" in names or "jetson" in names:
+    if "vision" in names and not live_vision:
         want["vision"] = "vision"   # satisfied by any vision.state message
     return want
 
@@ -187,7 +195,7 @@ async def wait_healthy(url: str, want: dict[str, str], timeout: float = HEALTH_T
                         svc = d.get("service")
                         if isinstance(svc, str):
                             seen[svc] = (bool(d.get("ok")), str(d.get("detail", "")))
-                            if svc.startswith(("jetson", "vision")) and d.get("ok"):
+                            if svc == "vision" and d.get("ok"):
                                 seen["vision"] = (True, d.get("detail", ""))
         except (OSError, asyncio.TimeoutError, Exception):  # hub not up yet
             await asyncio.sleep(0.5)
@@ -228,9 +236,15 @@ async def amain(args) -> int:
             await svc.start()
             if svc.name == "hub":
                 await asyncio.sleep(0.5)  # let the hub bind before clients connect
-        want = expected_health([s.name for s in services])
+        live_vision = not args.replay and not args.no_vision
+        want = expected_health([s.name for s in services], live_vision)
         seen = await wait_healthy(hub_url(config), want, args.timeout)
         report(want, seen, time.monotonic() - t0)
+        if live_vision:
+            ok, detail = seen.get("vision", (False, "starting"))
+            print(f"  {'OK  ' if ok else 'NEXT'}  {'vision':14} "
+                  + (detail if ok else "open the phone page on the phone on the robot and the eye page here; "
+                                       "objects appear once its frames arrive"))
         print("\n  Pages (open on any device on the same network):")
         for page, url in page_urls(config, lan_ip()).items():
             print(f"    {page:7} {url}")
@@ -263,9 +277,9 @@ def parse_args(argv=None):
     p.add_argument("--replay", metavar="SCENE", help="replay a recorded vision scene (scripts/scenes/<SCENE>.json)")
     p.add_argument("--audio-file", metavar="WAV", help="feed this audio file to the pipeline instead of the mic")
     p.add_argument("--no-bridge", action="store_true", help="don't start the USB micro:bit serial bridge")
-    p.add_argument("--jetson", action="store_true", help="also start the Jetson vision service over SSH")
-    p.add_argument("--jetson-user", default=os.environ.get("GENRATOR_JETSON_USER", ""), help="SSH user on the Jetson")
-    p.add_argument("--jetson-dir", default="~/sonar-bot-tune", help="repo folder on the Jetson")
+    p.add_argument("--no-vision", action="store_true", help="don't start the vision service (python -m vision)")
+    p.add_argument("--vision-camera", metavar="INDEX", default=None,
+                   help="vision reads this camera on the laptop instead of the phone's frames (testing)")
     p.add_argument("--timeout", type=float, default=HEALTH_TIMEOUT_S, help="seconds to wait for health (default 20)")
     return p.parse_args(argv)
 

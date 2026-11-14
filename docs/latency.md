@@ -12,7 +12,7 @@ python scripts/latency.py --seconds 120                  # in a second terminal
 ```
 
 - **Beat → lights**: just let music play. Each `audio.beat` is paired with the next `robot.cmd {kind: "lights"}` within 250 ms.
-- **Object → map**: move an object on the table every few seconds (or run `--replay object_moved`). A move is
+- **Object → world**: move an object in front of the robot every few seconds (or run `--replay drive_around`). A move is
   a `vision.state` position change of more than 0.01; it counts once `world.objects` shows the object within
   0.02 of the new position. Moves not shown within 3 s count as *missed*.
 - **Song → world** and **song → transition**: press **Enter** in the latency terminal at the moment the song
@@ -37,11 +37,11 @@ The gamepad talks to the Cutebot by radio, so the hub never sees it. Measure it 
 |---|---|---|---|---|---|
 | Joystick → movement | < 100 ms | not measured | | | slow-motion video, see above |
 | Beat → lights | < 100 ms | not measured | | | |
-| Object → map | < 500 ms | not measured | | | |
+| Object → world state | < 500 ms | not measured | | | |
 | New object → role announced | a few seconds | not measured | | | stopwatch from drop to narration |
 | Song → transition starts | 5–15 s | not measured | | | |
 | Song → new world | 5–15 s | not measured | | | |
 | Robot camera → restyled frame | comfortable to drive | not measured | | | `video.status.latency_ms` on the status page |
 
 Fill this in during the first hour at the venue: run the launcher, run the script for 2 minutes per path,
-paste its table here with the date and setup (mic or cable, Jetson or replay, venue wifi or hotspot).
+paste its table here with the date and setup (mic or cable, live vision or replay, venue wifi or hotspot).

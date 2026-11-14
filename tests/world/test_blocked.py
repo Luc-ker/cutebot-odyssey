@@ -1,12 +1,12 @@
 """T60 — physical-block detection."""
 from server.world.blocked import BlockedDetector, obstacle_word
 
-CFG = {"SAFETY_STOP_CM": 8, "TABLE_W_CM": 100, "TABLE_H_CM": 100}
+CFG = {"SAFETY_STOP_CM": 8}
 OCEAN = {"world": {"setting": "open ocean"}}
 
 
-def state(d, x=0.5, facing=None):
-    return {"pos": [x, 0.5], "heading": 0, "seen": True, "distance_cm": d, "override": False, "facing_id": facing}
+def state(d, facing=None):
+    return {"distance_cm": d, "override": False, "facing_id": facing}
 
 
 def run(det, states, dt=0.1, world=OCEAN, names=None, t0=0.0):
@@ -29,9 +29,10 @@ def test_uses_facing_name():
     assert ev == [{"kind": "blocked", "obstacle": "The Salt Queen"}]
 
 
-def test_moving_robot_is_not_blocked():
+def test_moving_past_something_is_not_blocked():
     det = BlockedDetector(CFG)
-    assert run(det, [state(6, x=0.3 + i * 0.015) for i in range(30)]) == []
+    # the reading keeps changing as the robot drives along a close obstacle
+    assert run(det, [state(9.5 - (i % 2) * 2 - (i % 3)) for i in range(30)]) == []
 
 
 def test_far_or_unknown_distance_not_blocked():

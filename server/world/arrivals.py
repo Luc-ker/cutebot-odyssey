@@ -1,15 +1,16 @@
 """T50 — New and removed object flow.
 
-When a new object appears on the table, give it a role in the current world
-(Gemini first, local picker if Gemini is slow, busy or down), remember it and
-announce it with ``world.event object_added``. When the registry drops an
-object after its grace period, publish ``object_removed``.
+When the robot sees an object for the first time, give it a role in the current
+world (Gemini first, local picker if Gemini is slow, busy or down), remember it and
+announce it with ``world.event object_added``. An object that comes back into view
+is re-identified by vision and keeps its id, so it is not announced again. When the
+registry forgets an object (unseen for ``OBJECT_FORGET_S``), publish ``object_removed``.
 
 This module drives the shared ``ObjectRegistry`` (T48): it calls
 ``registry.update`` for every ``vision.state`` and clears it on ``system.reset``.
-If ``vision.state`` stops arriving altogether (the overhead camera machine is down),
-a background check keeps expiring objects so they still leave after the grace
-period (whitepaper §7.15) instead of staying on the map forever.
+If ``vision.state`` stops arriving altogether (the vision service or the phone is down),
+a background check keeps ageing objects so they drop out of view and are eventually
+forgotten (whitepaper §7.15).
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ log = logging.getLogger(__name__)
 GEMINI_TIMEOUT_S = 4.0
 MAX_IN_FLIGHT = 2
 SKY_WINDOW_S = 3.0
-VISION_IDLE_S = 1.0   # no vision.state for this long → expire objects ourselves
+VISION_IDLE_S = 0.5   # no vision.state for this long (5 missed frames) → age objects ourselves
 EXPIRY_TICK_S = 0.25
 BEHAVIOURS = ("friendly", "neutral", "threat")
 
@@ -37,7 +38,7 @@ def _announce(role: dict, from_sky: bool) -> str:
     name = role.get("name") or role.get("role", "something").replace("_", " ")
     if from_sky:
         return f"From the sky, a giant sets down {name}."
-    return f"{name} rises from the land."
+    return f"Ahead, {name} rises from the land."
 
 
 class Arrivals:
@@ -201,8 +202,8 @@ class Arrivals:
         return result
 
     async def _default_snapshot(self) -> bytes | None:
-        host = self.config.get("JETSON_HOST")
-        port = self.config.get("JETSON_HTTP_PORT")
+        host = self.config.get("VISION_HOST")
+        port = self.config.get("VISION_HTTP_PORT")
         if not host or not port:
             return None
         url = f"http://{host}:{port}/snapshot.jpg"

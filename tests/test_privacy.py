@@ -16,7 +16,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_DIRS = ["server", "jetson", "scripts", "firmware", "web"]
+SOURCE_DIRS = ["server", "vision", "scripts", "firmware", "web"]
 ALLOW = "privacy-ok:"
 
 MEDIA_EXT = re.compile(r"\.(jpe?g|png|bmp|gif|webp|tiff?|wav|mp3|flac|ogg|m4a|mp4|avi|mov|mkv|webm)\b", re.I)
@@ -161,7 +161,7 @@ def scan(root: Path = ROOT, dirs=SOURCE_DIRS) -> list[str]:
     return problems
 
 
-REQUIREMENT_FILES = ["requirements.txt", "jetson/requirements.txt", "package.json"]
+REQUIREMENT_FILES = ["requirements.txt", "package.json"]
 
 
 def scan_requirements(root: Path = ROOT) -> list[str]:

@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#14120f">
+  <title>Genrator · Controller</title>
+  <style>
+    :root {
+      --bg: #14120f; --panel: #1f1c18; --line: #34302a; --text: #f1ebdf; --muted: #a39a8b;
+      --accent: #e8a33d; --ok: #7fbf6a; --bad: #e0654b;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden;
+                 overscroll-behavior: none; user-select: none; -webkit-user-select: none; }
+    main { height: 100%; display: grid; grid-template-rows: auto 1fr auto; gap: 12px;
+           padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .status { display: flex; align-items: center; gap: 8px; font-size: 15px; min-width: 0; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--bad); flex: none; }
+    .dot.connecting { background: var(--accent); }
+    .dot.connected { background: var(--ok); }
+    #status-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    button { font: inherit; font-size: 16px; font-weight: 600; color: var(--text); background: var(--panel);
+             border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; touch-action: manipulation; }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.4; }
+    #connect { background: var(--accent); color: #1a1307; border-color: var(--accent); }
+    #connect.connected { background: var(--panel); color: var(--text); border-color: var(--line); }
+    .stage { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr auto; gap: 12px; min-height: 0; }
+    .side { display: grid; gap: 12px; }
+    .readout { text-align: center; font-size: 15px; color: var(--muted); min-height: 1.4em; }
+    .readout.blocked { color: var(--bad); font-weight: 700; }
+    .pad-wrap { display: grid; place-items: center; min-height: 0; }
+    #pad { position: relative; width: min(78vw, 46vh, 340px); aspect-ratio: 1; border-radius: 50%;
+           background: radial-gradient(circle, #26221d 0%, #1b1815 70%); border: 2px solid var(--line);
+           touch-action: none; }
+    #pad::before, #pad::after { content: ""; position: absolute; background: var(--line); }
+    #pad::before { left: 50%; top: 12%; bottom: 12%; width: 2px; transform: translateX(-1px); }
+    #pad::after { top: 50%; left: 12%; right: 12%; height: 2px; transform: translateY(-1px); }
+    #knob { position: absolute; left: 50%; top: 50%; width: 34%; aspect-ratio: 1; border-radius: 50%;
+            background: var(--accent); box-shadow: 0 6px 20px rgba(0,0,0,.45); z-index: 1;
+            transform: translate(-50%, -50%); transition: transform .12s ease-out; }
+    #pad.active #knob { transition: none; }
+    .buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .buttons button { padding: 16px 6px; font-size: 15px; }
+    #stop { background: #3f2119; border-color: #6b3226; color: #f6c2b4; }
+    .notice { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+              font-size: 15px; line-height: 1.45; color: var(--muted); }
+    .notice strong { color: var(--text); }
+    .hint { font-size: 13px; color: var(--muted); text-align: center; }
+    @media (orientation: landscape) and (max-height: 520px) {
+      main { grid-template-rows: auto 1fr auto; }
+      .stage { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; align-items: center; }
+      #pad { width: min(42vw, 72vh, 320px); }
+      .buttons { grid-template-columns: repeat(2, 1fr); }
+      .hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="status"><span class="dot" id="dot"></span><span id="status-text">Not connected</span></div>
+      <button type="button" id="connect">Connect robot</button>
+    </header>
+
+    <div class="stage">
+      <div class="pad-wrap">
+        <div id="pad" aria-label="Joystick: drag to drive"><div id="knob"></div></div>
+      </div>
+      <div class="side">
+        <div class="readout" id="readout"></div>
+        <div class="buttons">
+          <button type="button" id="lights">Lights</button>
+          <button type="button" id="flash">Flash</button>
+          <button type="button" id="horn">Horn</button>
+          <button type="button" id="stop">Stop</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="notice" class="notice" hidden></div>
+    <p class="hint" id="hint">Drag the circle to drive. On a laptop, arrow keys or WASD work too.</p>
+  </main>
+
+  <script type="module">
+    import { createLink, drivePacket, lightPacket, HORN, parseTelemetry, stickToDrive, DRIVE_HZ } from "./pad.js";
+
+    const $ = (id) => document.getElementById(id);
+    const LIGHT_COLOURS = [
+      { name: "off", rgb: [0, 0, 0] }, { name: "white", rgb: [255, 255, 255] }, { name: "red", rgb: [255, 0, 0] },
+      { name: "green", rgb: [0, 255, 0] }, { name: "blue", rgb: [0, 80, 255] }, { name: "purple", rgb: [160, 0, 255] },
+    ];
+
+    // ---- can this browser do it? ---------------------------------------------------------------------
+    function explainUnsupported() {
+      const n = $("notice");
+      n.hidden = false;
+      $("connect").disabled = true;
+      if (!window.isSecureContext) {
+        n.innerHTML = "<strong>Bluetooth needs a secure page.</strong> Open this page as <strong>https://</strong>, " +
+          "or as <strong>http://localhost</strong> on the laptop. On an Android phone you can instead allow this " +
+          "address in Chrome: <strong>chrome://flags</strong> → <em>Insecure origins treated as secure</em> → add " +
+          `<strong>${location.origin}</strong> → Relaunch.`;
+      } else {
+        n.innerHTML = "<strong>This browser can't use Bluetooth.</strong> Open this page in <strong>Chrome on an " +
+          "Android phone</strong> or <strong>Chrome on a laptop</strong>. iPhone browsers (Safari and Chrome) " +
+          "don't support it; on an iPhone, the Bluefy app works.";
+      }
+    }
+    if (!window.isSecureContext || !navigator.bluetooth) explainUnsupported();
+
+    // ---- link ----------------------------------------------------------------------------------------
+    let wakeLock = null;
+    const link = createLink({
+      bluetooth: navigator.bluetooth,
+      onStatus(state, detail) {
+        $("dot").className = `dot ${state}`;
+        const text = { connecting: "Connecting…", connected: "Connected", disconnected: "Not connected",
+                       error: "Couldn't connect" }[state] ?? state;
+        $("status-text").textContent = detail ? `${text} · ${detail}` : text;
+        const on = state === "connected";
+        $("connect").textContent = on ? "Disconnect" : "Connect robot";
+        $("connect").classList.toggle("connected", on);
+        if (on) navigator.wakeLock?.request("screen").then((l) => { wakeLock = l; }).catch(() => {});
+        else { wakeLock?.release?.(); wakeLock = null; $("readout").textContent = ""; }
+      },
+      onLine(line) {
+        const t = parseTelemetry(line);
+        if (!t) return;
+        const r = $("readout");
+        r.classList.toggle("blocked", t.blocked);
+        r.textContent = t.blocked ? "Too close: forward blocked"
+          : t.distance_cm == null ? "Nothing ahead" : `Ahead: ${t.distance_cm} cm`;
+      },
+    });
+
+    $("connect").addEventListener("click", async () => {
+      if (link.connected) return link.disconnect();
+      try { await link.connect(); } catch (e) { console.warn("[pad]", e); }
+    });
+
+    // ---- joystick ------------------------------------------------------------------------------------
+    const pad = $("pad"), knob = $("knob");
+    let stick = { x: 0, y: 0 };
+    let pointerId = null;
+
+    function setKnob(x, y) {
+      const r = pad.clientWidth / 2 - knob.clientWidth / 2;
+      knob.style.transform = `translate(calc(-50% + ${x * r}px), calc(-50% + ${-y * r}px))`;
+    }
+    function fromPointer(e) {
+      const rect = pad.getBoundingClientRect();
+      const r = rect.width / 2;
+      let x = (e.clientX - rect.left - r) / r;
+      let y = -(e.clientY - rect.top - r) / r;
+      const len = Math.hypot(x, y);
+      if (len > 1) { x /= len; y /= len; }
+      stick = { x, y };
+      setKnob(x, y);
+    }
+    function release() {
+      pointerId = null;
+      stick = { x: 0, y: 0 };
+      pad.classList.remove("active");
+      setKnob(0, 0);
+    }
+    pad.addEventListener("pointerdown", (e) => {
+      pointerId = e.pointerId;
+      pad.setPointerCapture(e.pointerId);
+      pad.classList.add("active");
+      fromPointer(e);
+    });
+    pad.addEventListener("pointermove", (e) => { if (e.pointerId === pointerId) fromPointer(e); });
+    for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) {
+      pad.addEventListener(ev, (e) => { if (e.pointerId === pointerId) release(); });
+    }
+
+    // ---- keyboard (laptop) ---------------------------------------------------------------------------
+    const keys = new Set();
+    const KEYMAP = { ArrowUp: "up", w: "up", ArrowDown: "down", s: "down", ArrowLeft: "left", a: "left",
+                     ArrowRight: "right", d: "right" };
+    function keyStick() {
+      if (pointerId !== null) return;
+      const x = (keys.has("right") ? 1 : 0) - (keys.has("left") ? 1 : 0);
+      const y = (keys.has("up") ? 1 : 0) - (keys.has("down") ? 1 : 0);
+      stick = { x, y: y * 0.8 };
+      setKnob(stick.x * 0.8, stick.y);
+    }
+    addEventListener("keydown", (e) => { const k = KEYMAP[e.key]; if (k) { keys.add(k); keyStick(); e.preventDefault(); } });
+    addEventListener("keyup", (e) => { const k = KEYMAP[e.key]; if (k) { keys.delete(k); keyStick(); } });
+    addEventListener("blur", () => { keys.clear(); keyStick(); release(); });
+
+    // ---- drive loop: send the stick 20 times a second; the robot stops by itself if this ever stops ----
+    let seq = 0;
+    setInterval(() => {
+      if (!link.connected || document.hidden) return;
+      const { throttle, turn } = stickToDrive(stick.x, stick.y);
+      link.send(drivePacket(throttle, turn, seq++), { drive: true });
+    }, Math.round(1000 / DRIVE_HZ));
+    document.addEventListener("visibilitychange", () => { if (document.hidden) { release(); keys.clear(); } });
+
+    // ---- buttons -------------------------------------------------------------------------------------
+    let colour = 0;
+    $("lights").addEventListener("click", () => {
+      colour = (colour + 1) % LIGHT_COLOURS.length;
+      link.send(lightPacket(LIGHT_COLOURS[colour].rgb, "S"));
+      $("lights").textContent = colour ? `Lights: ${LIGHT_COLOURS[colour].name}` : "Lights";
+    });
+    $("flash").addEventListener("click", () => link.send(lightPacket([255, 0, 0], "F", 600)));
+    $("horn").addEventListener("click", () => link.send(HORN));
+    $("stop").addEventListener("click", () => { release(); keys.clear(); link.send(drivePacket(0, 0, seq++), { drive: true }); });
+  </script>
+</body>
+</html>

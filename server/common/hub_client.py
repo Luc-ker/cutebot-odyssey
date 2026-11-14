@@ -1,6 +1,6 @@
-"""Hub client for Python services (T09, contract C2). Depends only on `websockets`, so it runs on the Jetson.
+"""Hub client for Python services (T09, contract C2). Depends only on `websockets`.
 
-    hub = await HubClient.connect("ws://laptop:8765/hub", "jetson")
+    hub = await HubClient.connect("ws://laptop:8765/hub", "vision")
     hub.sub("system.reset", on_reset)          # async (or plain) callback taking the envelope
     await hub.pub("vision.state", {...})        # fills ts and src; dropped (returns False) while disconnected
     await hub.close()

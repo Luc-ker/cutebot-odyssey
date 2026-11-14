@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "temple" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M8 56h48l-3-6H11Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M12 50h40l-3-7H15Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M16 43h32l-4-8H20Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M21 35h22l-4-9H25Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M28 26v-6h8v6" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M29 56v-6a3 3 0 0 1 6 0v6Z" fill="#2b1d0e"/>
-<path d="M10 52c4-3 6 1 9-3M45 40c3 2 5-1 7 2" stroke="#4f8a3a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-</svg>

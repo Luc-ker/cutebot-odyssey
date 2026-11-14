@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "harbour" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M4 44h56" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M6 44v12M18 44v12M30 44v12M42 44v12M54 44v12" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<rect x="4" y="40" width="56" height="5" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M36 38c2 6 18 6 20 0Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M46 37V18l9 14Z" fill="#fff4dc" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M8 28h18v12H8z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M6 28 17 20l11 8Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M2 58c6-3 10 3 16 0s10 3 16 0 10 3 16 0 10 3 12 1" fill="none" stroke="#7cc4e8" stroke-width="2.5" stroke-linecap="round"/>
-</svg>

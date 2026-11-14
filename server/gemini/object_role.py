@@ -48,11 +48,11 @@ async def request_role(world: dict, obj: dict, image_jpeg: bytes | None) -> dict
     world_info = world.get("world", world) if isinstance(world, dict) else {}
     summary = {key: world_info.get(key) for key in ("name", "setting", "mood") if world_info.get(key)}
     prompt = "\n".join((
-        "Assign this one new table object a role in the current fantasy world. Return JSON only.",
+        "The robot has just spotted this object for the first time. Assign it a role in the current fantasy world. Return JSON only.",
         f"World: {json.dumps(summary, ensure_ascii=True)}",
         f"Object: {json.dumps({key: obj.get(key) for key in ('id', 'cls', 'class', 'pos', 'size') if key in obj}, ensure_ascii=True)}",
         "Allowed roles and default behaviours: " + json.dumps(allowed, ensure_ascii=True),
-        "Use the object's crop if supplied. Keep the name concise and the in-world announcement to 15 words.",
+        "Use the crop from the robot's camera if supplied. Keep the name concise and the in-world announcement to 15 words.",
     ))
     parts = [{"text": prompt}]
     crop = _crop_snapshot(image_jpeg, obj)

@@ -3,6 +3,12 @@
 Source of truth for behaviour: `genrator-whitepaper.md` (§ numbers in tickets refer to it).
 One file = one ticket. Grouping by component: `tickets/Components.md`. Tickets are **not assigned**.
 
+> **Change (T111): first person only.** There is no overhead camera, no Jetson and no map. The only camera is
+> the phone on the robot. Vision runs on the laptop on the phone's frames, every position is in **view units**
+> (C1), objects that leave the view are remembered, and the robot has no position or heading. Tickets written
+> before this change (T36–T46, T85–T94 and parts of others) describe the old design; where they disagree with
+> this page, this page wins. See `tickets/T111-first-person-vision.md`.
+
 ## How these tickets stay independent
 
 Every ticket **owns its own files** and nothing else. Where a ticket needs another ticket's code, it codes
@@ -18,10 +24,10 @@ Changing a contract on this page is its own small PR that the owners of the affe
 shared/          config.json, roles.json, schemas/*.json, worlds/*.json       (data both sides read)
 firmware/        MicroPython for micro:bit V2: cutebot/, gamepad/, bridge/, common/
 server/          Python 3.11, asyncio. hub/, common/, bridge/, audio/, world/, gemini/, narration/, ops/
-web/             Plain JavaScript ES modules, no build step. common/, phone/, eye/, map/, sound/, status/
-jetson/          Python 3 overhead vision (OpenCV, a YOLO model, TensorRT where available)
+web/             Plain JavaScript ES modules, no build step. common/, phone/, eye/, sound/, status/
+vision/          Python 3 vision on the phone's frames, run on the laptop (OpenCV, a YOLO model)
 scripts/         Launchers, benches, test tools
-tests/           pytest for server/ and jetson/ (mirrors source paths); web tests use `node --test`
+tests/           pytest for server/ (mirrors source paths; vision/tests/ for vision/); web tests use `node --test`
 docs/            Runbooks and write-ups
 ```
 
@@ -29,13 +35,16 @@ Firmware can move to MakeCode if the team prefers; the radio packets (C6) stay t
 
 ## C1. Space and time
 
-- **Table coordinates:** `[x, y]`, floats, normalised so the calibrated table is `0 ≤ x ≤ 1`, `0 ≤ y ≤ 1`.
-  Origin is the table's top-left corner as seen from the overhead camera, `y` grows downward.
-- **Sizes:** `[w, h]` in the same normalised units. Real size via `config.TABLE_W_CM`, `config.TABLE_H_CM`.
-- **Heading:** radians, `0` points along `+x`, increases clockwise (because `y` points down), range `(-π, π]`.
+- **View coordinates:** `[x, y]`, floats, normalised to the robot camera's frame: `0 ≤ x ≤ 1` left to right,
+  `0 ≤ y ≤ 1` top to bottom. `x = 0.5` is straight ahead; the angle to an object is
+  `geometry.bearing(x, config.CAMERA_HFOV_DEG)`.
+- **Sizes:** `[w, h]` as fractions of the frame's width and height. Bigger means closer; "size" alone means
+  `max(w, h)` (`geometry.view_size`).
+- **No robot pose.** The camera is the robot, so there is no position or heading on the table. Distance ahead
+  comes from the ultrasonic sensor (`robot.telemetry.distance_cm`).
 - **Time:** `ts` is Unix seconds as a float, from the sender's clock.
-- **IDs:** tracked objects have integer `id`s from the Jetson tracker. Worlds have string `id`s (`"w-" + 8 hex`).
-  Giants have string ids `"g<n>"`.
+- **IDs:** objects have integer `id`s from the vision tracker, kept across leaving and re-entering the view by
+  appearance re-id. Worlds have string `id`s (`"w-" + 8 hex`). Giants have string ids `"g<n>"`.
 
 ## C2. The hub (WebSocket pub/sub on the laptop)
 
@@ -53,7 +62,8 @@ Firmware can move to MakeCode if the team prefers; the radio packets (C6) stay t
 
 | Topic | Publisher | `data` |
 |---|---|---|
-| `vision.state` | Jetson (T44), 10 Hz | `{frame_ts, objects:[{id, cls, pos, size, conf}], robot:{pos, heading, seen}\|null, giants:[{id, kind:"hand"\|"person", pos, size, edge:"top"\|"bottom"\|"left"\|"right"}]}` |
+| `camera.frame` | eye page (`web/eye/frames.js`), `VISION_HZ` | `{jpeg, w, h}`: the phone's raw view as base64 JPEG, `FRAME_WIDTH` px wide. **Bulk:** only delivered to clients that subscribe by a pattern naming it (`camera.frame`, `camera.*`), never to `*` |
+| `vision.state` | vision service (`python -m vision`, T44), up to `VISION_HZ` | `{frame_ts, objects:[{id, cls, pos, size, conf}], giants:[{id, kind:"hand"\|"person", pos, size, edge:"top"\|"bottom"\|"left"\|"right"}]}`: only what is in view now |
 | `robot.telemetry` | serial bridge (T22) | `{distance_cm, line:[l, r], override: bool}` |
 | `robot.cmd` | light director (T23), threat reaction (T58), reset (T63) | `{kind:"lights", mode:"solid"\|"flash"\|"pulse", rgb:[r,g,b], ms}` or `{kind:"recoil", ms}` or `{kind:"rumble", ms}` |
 | `gamepad.button` | serial bridge (T22) | `{button: "light"\|"horn"\|"shout"\|"reset"}` |
@@ -61,8 +71,8 @@ Firmware can move to MakeCode if the team prefers; the radio packets (C6) stay t
 | `audio.features` | features (T66), 20 Hz | `{rms, energy, brightness, silent: bool}` (energy, brightness 0–1) |
 | `world.current` | world scheduler (T74) | `{world: World, previous_id: str\|null}` — sent on change and every 5 s |
 | `world.transition` | transition coordinator (T95) | `{from: World\|null, to: World, started, duration_ms}` |
-| `world.objects` | world objects publisher (T62), 10 Hz | `{world_id, objects:[{id, cls, pos, size, role, name, behaviour, cluster_id, from_sky}], clusters:[{id, pos, member_ids, role, name}], terrain}` |
-| `robot.state` | robot state aggregator (T55), 10 Hz | `{pos, heading, seen, distance_cm, override, facing_id: int\|null}` |
+| `world.objects` | world objects publisher (T62), 10 Hz | `{world_id, objects:[{id, cls, pos, size, visible, role, name, behaviour, cluster_id, from_sky}], clusters:[{id, pos, size, member_ids, role, name}], terrain:{open_space, under_table}}`: every object discovered and not yet forgotten; `visible` false = out of view (pos/size are where it was last seen) |
+| `robot.state` | robot state aggregator (T55), 10 Hz | `{distance_cm, override, facing_id: int\|null}` |
 | `world.event` | various (see `kind`) | `{kind, ...}` — kinds listed below |
 | `narration.say` | anyone | `{text, priority: 0–3, voice?: str}` (3 = most urgent) |
 | `narration.speak` | narration queue (T79) | `{id, text, voice}` — exactly one at a time |
@@ -92,7 +102,7 @@ Firmware can move to MakeCode if the team prefers; the radio packets (C6) stay t
   "music_signature": {"tempo_bpm": float, "energy": float, "brightness": float, "chroma": [12 floats]} }
 ```
 JSON Schema file: `shared/schemas/world.schema.json` (T02). `palette` entries are colour words; `shared/colours.json`
-(T02) maps common colour words to RGB for lights and map tints.
+(T02) maps common colour words to RGB for the robot's lights and screen tints.
 
 ## C5. Role vocabulary — `shared/roles.json` (T03)
 
@@ -121,18 +131,18 @@ system-only. Until T03 merges, tests use a three-role stub.
 | Module (owner) | Interface |
 |---|---|
 | `server/common/config.py` (T01) | `load_config() -> dict` |
-| `server/common/geometry.py` (T06) | `dist(a,b)`, `angle_to(a,b)`, `angle_diff(a,b)`, `in_cone(origin, heading, target, half_angle, max_dist)`, `cm_to_units(cm, axis)` |
+| `server/common/geometry.py` (T06) | `dist(a,b)`, `angle_to(a,b)`, `angle_diff(a,b)`, `wrap_angle(a)`, `bearing(x, hfov_deg)`, `view_size(size)` |
 | `server/common/schemas.py` (T02, T04) | `validate_world(obj) -> list[str]` errors, `validate_envelope(obj) -> list[str]` |
-| `server/world/registry.py` (T48) | `ObjectRegistry.update(vision_state, now) -> Diff{added, removed, moved}`; `.get(id)`; `.all()` |
+| `server/world/registry.py` (T48) | `ObjectRegistry.update(vision_state, now) -> Diff{added, removed}`; `.get(id)`; `.all()`; `.visible()`. Out of view after `VIEW_GRACE_S`, removed after `OBJECT_FORGET_S` |
 | `server/world/memory.py` (T49) | `RoleMemory.get(world_id, obj_id) -> Role\|None`, `.set(world_id, obj_id, role)`, `.roles_for(world_id)` |
 | `server/world/fallback_roles.py` (T51) | `pick_role(world, cls, taken_roles) -> Role` |
-| `server/world/clusters.py` (T52) | `find_clusters(objects, max_gap) -> list[Cluster{id, member_ids, pos}]` |
-| `server/world/terrain.py` (T53) | `analyse(objects, world) -> {"open_regions": [...], "open_space": str, "under_table": str}` |
+| `server/world/clusters.py` (T52) | `find_clusters(objects_in_view, max_gap) -> list[Cluster{id, member_ids, pos, size}]` |
+| `server/world/terrain.py` (T53) | `analyse(objects, world) -> {"open_space": str, "under_table": str}` |
 | `server/world/worlds.py` (T54) | `WorldRegistry.add(world)`, `.match(signature) -> World\|None`, `.get(id)` |
 | `server/audio/capture.py` (T64) | `AudioInput(config).start()`, `.on_block(cb(samples_float32, ts))`, `.last(seconds) -> ndarray`, `.rate` |
 | `server/audio/silence.py` (T67) | `SilenceGate().update(rms, ts) -> bool` (true = silent) |
 | `server/audio/change.py` (T69) | `ChangeDetector().update(samples, ts) -> bool` (true once per detected song change) |
-| `server/world/facing.py` (T56) | `facing(robot_state, objects) -> int\|None` |
+| `server/world/facing.py` (T56) | `facing(objects, clusters=None) -> int\|None`: the biggest in-view object within `FACING_HALF_ANGLE_DEG` of straight ahead |
 | `server/audio/clips.py` (T68) | `ClipStore(audio_input).get_clip(seconds) -> bytes\|None` (16 kHz mono WAV; None if mostly silent) |
 | `server/audio/signature.py` (T70) | `signature(window) -> dict`, `distance(sig_a, sig_b) -> float` 0–1 |
 | `server/gemini/client.py` (T71) | `async compose_world(audio_wav, image_jpeg, objects, current_world) -> dict` (raw); `async ask_json(parts, schema) -> dict` |
@@ -143,20 +153,18 @@ system-only. Until T03 merges, tests use a three-role stub.
 
 Every brain module exposes `async def run(hub, config)` if it has its own loop; T104 wires them.
 
-## C8. Jetson interfaces (`jetson/`)
+## C8. Vision interfaces (`vision/`, runs on the laptop)
 
 | Module (owner) | Interface |
 |---|---|
-| `camera.py` (T36) | `Camera(config).read() -> (ts, frame_bgr)`, `.latest() -> (ts, frame_bgr)` |
-| `calibration.py` (T37) | `Calibration.load(path)`, `.to_table([u,v]) -> [x,y]`, `.to_pixel([x,y])`, `.contains([u,v])`, `.edge_of([u,v]) -> str\|None` |
-| `detector.py` (T38) | `detect(frame) -> list[Detection{bbox:[x1,y1,x2,y2], cls, conf}]` |
-| `generic_detector.py` (T110) | `GenericDetector.detect(frame, known: list[Detection]) -> list[Detection]` with `cls="object"` |
-| `tracker.py` (T39) | `Tracker.update(dets, ts) -> list[Track{id, cls, bbox, conf}]` |
-| `reid.py` (T40) | `ReId.apply(tracks, ts) -> list[Track]` (stable ids across short gaps) |
-| `robot_marker.py` (T41) | `find_robot(frame) -> {"px": [u,v], "heading": rad, "bbox": [...]}\|None` (pixel space) |
-| `robot_pose.py` (T42) | `RobotPose.update(measurement\|None, ts) -> {pos, heading, seen}` |
-| `giants.py` (T43) | `GiantDetector.detect(frame, calib) -> list[{bbox, kind, edge}]` |
-| HTTP `GET :<config.JETSON_HTTP_PORT>/snapshot.jpg` (T45) | current overhead frame, people blurred, max 1024 px wide |
+| `frames.py` (T111) | `HubFrames()`; `.on_envelope(env)` for `camera.frame`; `.read(timeout) -> (ts, frame_bgr)`, `.latest()` |
+| `camera.py` (T36) | `Camera(config, index=, file=)`: same interface, a local camera or clip (development) |
+| `detector.py` (T38) | `Detector().detect(frame) -> list[Detection{bbox:[x1,y1,x2,y2], cls, conf}]`, `.detect_all(frame)` |
+| `tracker.py` (T39) | `Tracker(min_hits=).update(dets, ts) -> list[Track{id, cls, bbox, conf}]` |
+| `reid.py` (T40) | `ReId(config).apply(tracks, ts, frame) -> list[Track]`: stable ids by appearance for `OBJECT_FORGET_S` |
+| `giants.py` (T43) | `GiantDetector().detect(frame, persons) -> list[{bbox, kind, edge}]`: skin blobs reaching in from a frame edge, and person detections |
+| `state.py` (T44) | `build_state(tracks, giants, frame_shape, ts) -> vision.state data` |
+| HTTP `GET <VISION_HOST>:<VISION_HTTP_PORT>/snapshot.jpg` (T45) | the robot's current view, people blurred, max 1024 px wide |
 
 ## C9. Browser interfaces (`web/`)
 
@@ -164,19 +172,19 @@ Every brain module exposes `async def run(hub, config)` if it has its own loop; 
 |---|---|
 | `web/common/hub.js` (T08) | see C2 |
 | `web/common/config.js` (T01) | `await loadConfig() -> object` |
-| `web/common/geometry.js` (T06) | `toScreen([x,y], rect) -> [px,py]`, `dist`, `angleTo` |
+| `web/common/geometry.js` (T06) | `toScreen([x,y], rect) -> [px,py]`, `fromScreen`, `dist`, `angleTo`, `bearing(x, hfovDeg)` |
 | `web/common/colours.js` (T02) | `await colourFor(word) -> [r,g,b]` |
 | `web/eye/receiver.js` (T26) | `await receivePhoneStream(hub) -> MediaStream` |
+| `web/eye/frames.js` (T111) | `startFrameSender(hub, video, {hz, width}) -> {stop(), sent()}`: publishes `camera.frame` |
 | `web/eye/restyler.js` (T28) | `createRestyler(config)` → `{start(stream) -> Promise<MediaStream>, setPrompt(text), stop(), onStatus(cb)}` |
-| `web/map/layers/*.js` (T86–T94) | each exports `createLayer()` → `{update(state), draw(ctx, rect, t, beat)}` where `state` holds the latest `world.objects`, `robot.state`, `world.current`, `vision.state` and `audio.*` |
 | `web/sound/tts.js` (T80) | `createTts()` → `{speak({id, text, voice}) -> Promise<void>, cancel()}` |
 | `web/sound/sfx.js` (T81) | `createSfx()` → `{play(name)}` |
 
 ## C10. Config keys — `shared/config.json` (T01)
 
 `HUB_PORT, TLS_CERT, TLS_KEY, RADIO_GROUP, RADIO_CHANNEL, DRIVE_HZ, FAILSAFE_MS, SAFETY_STOP_CM, RECOIL_MS,
-TABLE_W_CM, TABLE_H_CM, VISION_HZ, JETSON_HOST, JETSON_HTTP_PORT, OBJECT_GRACE_S, CLUSTER_GAP,
-DANGER_RADIUS, FRIENDLY_RADIUS, FACING_HALF_ANGLE_DEG, FACING_MAX_DIST, AUDIO_DEVICE, AUDIO_RATE,
+VISION_HZ, VISION_HOST, VISION_HTTP_PORT, FRAME_WIDTH, CAMERA_HFOV_DEG, VIEW_GRACE_S, OBJECT_FORGET_S,
+CLUSTER_GAP, DANGER_SIZE, FRIENDLY_SIZE, NEAR_CM, FACING_HALF_ANGLE_DEG, FACING_MIN_SIZE, AUDIO_DEVICE, AUDIO_RATE,
 CLIP_SECONDS, GEMINI_INTERVAL_S, GEMINI_TIMEOUT_S, GEMINI_MODEL, WORLD_CHANGE_THRESHOLD,
 RETURN_MATCH_THRESHOLD, NARRATION_MAX_CHARS, TRANSITION_MS, LIGHT_MAX_HZ`.
 Secrets (`GEMINI_API_KEY`, video model key) come from environment variables, never from files in the repo.

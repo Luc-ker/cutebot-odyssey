@@ -7,7 +7,7 @@
 Paths (times are when this script receives each message, so every path includes the same hub hop):
 
     beat -> lights      audio.beat  -> the next robot.cmd {kind: "lights"}             target < 100 ms
-    object -> map       vision.state with an object moved -> world.objects showing it   target < 500 ms
+    object -> world     vision.state with an object moved -> world.objects showing it   target < 500 ms
     song -> world       you press Enter when the song changes -> world.current, new id  target 5-15 s
     song -> transition  same mark -> world.transition                                   (shown as it starts)
 
@@ -33,12 +33,12 @@ if str(ROOT) not in sys.path:
 BEAT_MATCH_S = 0.25        # a lights command later than this after a beat is not "for" that beat
 MOVE_EPS = 0.01            # normalised units; smaller jitter is not a move
 MAP_MATCH_EPS = 0.02       # world.objects pos within this of the moved-to pos counts as updated
-MOVE_TIMEOUT_S = 3.0       # give up on a move that never shows on the map
+MOVE_TIMEOUT_S = 3.0       # give up on a move that never shows in world.objects
 SONG_TIMEOUT_S = 60.0
 
 TARGETS = {
     "beat -> lights": "< 100 ms",
-    "object -> map": "< 500 ms",
+    "object -> world": "< 500 ms",
     "song -> world": "5-15 s",
     "song -> transition": "5-15 s",
 }
@@ -96,12 +96,12 @@ class Latency:
             for oid, (_, t0) in list(self._moves.items()):
                 if t - t0 > MOVE_TIMEOUT_S:
                     del self._moves[oid]
-                    self.missed["object -> map"] += 1
+                    self.missed["object -> world"] += 1
         elif topic == "world.objects":
             for o in data.get("objects") or []:
                 m = self._moves.get(o.get("id"))
                 if m and o.get("pos") and _close(m[0], o["pos"], MAP_MATCH_EPS):
-                    self.samples["object -> map"].append(t - m[1])
+                    self.samples["object -> world"].append(t - m[1])
                     del self._moves[o["id"]]
         elif topic == "world.current":
             wid = ((data.get("world") or {}).get("id"))
@@ -193,7 +193,7 @@ def selftest() -> int:
     print(lat.report())
     s = lat.samples
     assert len(s["beat -> lights"]) == 20 and abs(percentile(s["beat -> lights"], 50) - 0.0395) < 1e-6
-    assert len(s["object -> map"]) == 1 and abs(s["object -> map"][0] - 0.25) < 1e-9
+    assert len(s["object -> world"]) == 1 and abs(s["object -> world"][0] - 0.25) < 1e-9
     assert s["song -> world"] == [9.0] and s["song -> transition"] == [8.0]
     print("selftest ok")
     return 0

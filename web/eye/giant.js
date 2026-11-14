@@ -112,7 +112,7 @@ export function mountGiant(container, hub, opts = {}) {
         sync();
       }
     }),
-    // Safety net: if a giant_leave is ever lost, the overhead view still tells us who is there.
+    // Safety net: if a giant_leave is ever lost, vision.state still tells us who is in view.
     // A giant missing from vision.state for LOST_MS is dropped (short flickers are ignored).
     hub.sub("vision.state", (env) => {
       const list = env.data?.giants;

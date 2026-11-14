@@ -2,137 +2,87 @@
  "name": "hand_enters",
  "duration_s": 10,
  "hz": 10,
- "description": "A hand reaches in from the left at 2 s, rests, leaves at 6 s; robot loses its marker while the hand is over it.",
+ "description": "A cup ahead; a hand reaches down into the view from the top at 2 s, rests, and leaves at 6 s.",
  "objects": [
-  {
-   "id": 1,
-   "cls": "chair",
-   "size": [
-    0.14,
-    0.18
-   ],
-   "path": [
-    [
-     0,
-     [
-      0.22,
-      0.3
-     ]
-    ]
-   ]
-  },
-  {
-   "id": 2,
-   "cls": "bottle",
-   "size": [
-    0.05,
-    0.05
-   ],
-   "path": [
-    [
-     0,
-     [
-      0.7,
-      0.25
-     ]
-    ]
-   ]
-  },
   {
    "id": 3,
    "cls": "cup",
-   "size": [
-    0.06,
-    0.06
-   ],
-   "path": [
+   "seen": [
     [
-     0,
      [
-      0.6,
-      0.7
-     ]
-    ]
-   ]
-  },
-  {
-   "id": 4,
-   "cls": "book",
-   "size": [
-    0.16,
-    0.11
-   ],
-   "path": [
-    [
-     0,
+      0,
+      [
+       0.55,
+       0.65
+      ],
+      [
+       0.12,
+       0.14
+      ]
+     ],
      [
-      0.3,
-      0.75
+      10,
+      [
+       0.55,
+       0.65
+      ],
+      [
+       0.12,
+       0.14
+      ]
      ]
     ]
    ]
   }
  ],
- "robot": {
-  "path": [
-   [
-    0,
-    [
-     0.3,
-     0.5
-    ]
-   ],
-   [
-    10,
-    [
-     0.55,
-     0.5
-    ]
-   ]
-  ],
-  "hidden": [
-   [
-    4,
-    5
-   ]
-  ]
- },
  "giants": [
   {
    "id": "g1",
    "kind": "hand",
-   "edge": "left",
-   "size": [
-    0.22,
-    0.12
-   ],
+   "edge": "top",
    "path": [
     [
      2,
      [
-      0.0,
-      0.5
+      0.4,
+      0.08
+     ],
+     [
+      0.2,
+      0.15
      ]
     ],
     [
      3,
      [
-      0.25,
-      0.5
+      0.42,
+      0.3
+     ],
+     [
+      0.3,
+      0.6
      ]
     ],
     [
-     5,
+     5.5,
      [
-      0.27,
-      0.52
+      0.42,
+      0.3
+     ],
+     [
+      0.3,
+      0.6
      ]
     ],
     [
      6,
      [
-      0.0,
-      0.5
+      0.4,
+      0.08
+     ],
+     [
+      0.2,
+      0.15
      ]
     ]
    ]

@@ -51,7 +51,7 @@ async def nothing(ws, timeout=0.3):
 
 
 VISION = {"frame_ts": 1.0, "objects": [{"id": 3, "cls": "cup", "pos": [0.25, 0.5], "size": [0.1, 0.1], "conf": 0.9}],
-          "robot": None, "giants": []}
+          "giants": []}
 
 
 def test_topic_matching():
@@ -62,6 +62,14 @@ def test_topic_matching():
     assert not topic_matches("audio.beat", "audio.beats")
 
 
+def test_camera_frames_only_reach_clients_that_ask_for_them():
+    assert topic_matches("camera.frame", "camera.frame")
+    assert topic_matches("camera.*", "camera.frame")
+    assert not topic_matches("*", "camera.frame")
+    assert not topic_matches("cam*", "camera.frame")
+    assert topic_matches("*", "vision.state")
+
+
 def test_pub_sub_unchanged_and_filtered():
     async def main():
         async with Running(health_interval=3600) as h:
@@ -69,10 +77,10 @@ def test_pub_sub_unchanged_and_filtered():
                 await sub(a, "vision.*")
                 await asyncio.sleep(0.05)
                 await pub(b, "world.current", {"world": {}, "previous_id": None})
-                await pub(b, "vision.state", VISION, src="jetson")
+                await pub(b, "vision.state", VISION, src="vision")
                 env = await recv(a)
                 assert env["topic"] == "vision.state"
-                assert env["src"] == "jetson"
+                assert env["src"] == "vision"
                 assert env["data"] == VISION
                 assert set(env) == {"topic", "ts", "src", "data"}
                 await nothing(a)  # world.current was not delivered

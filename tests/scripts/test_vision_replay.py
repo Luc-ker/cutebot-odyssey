@@ -1,7 +1,6 @@
 import asyncio
 import importlib.util
 import json
-import math
 import time
 from pathlib import Path
 
@@ -23,7 +22,7 @@ def env(data):
 
 def test_five_scenes_exist():
     names = {p.stem for p in SCENES}
-    assert {"static_table", "robot_loop", "object_moved", "hand_enters", "crisp_packet_dropped"} <= names
+    assert {"static_view", "drive_around", "approach_threat", "hand_enters", "object_dropped"} <= names
 
 
 @pytest.mark.parametrize("path", SCENES, ids=lambda p: p.stem)
@@ -35,7 +34,7 @@ def test_every_frame_of_every_scene_is_valid(path):
 
 
 def test_replay_publishes_in_order_with_correct_spacing():
-    frames, scene = vr.load_frames(ROOT / "scripts" / "scenes" / "robot_loop.json")
+    frames, scene = vr.load_frames(ROOT / "scripts" / "scenes" / "drive_around.json")
     frames = frames[:15]  # 1.5 s at 10 Hz
     got = []
 
@@ -48,32 +47,35 @@ def test_replay_publishes_in_order_with_correct_spacing():
     for i, (t, data) in enumerate(got):
         assert abs((t - t0) - frames[i][0]) < 0.02, (i, t - t0)
         assert validate_envelope(env(data)) == []
-        assert data["robot"]["pos"] == frames[i][1]["robot"]["pos"]  # in order
+        assert data["objects"] == frames[i][1]["objects"]  # in order
     stamps = [d["frame_ts"] for _, d in got]
     assert stamps == sorted(stamps)
 
 
-def test_robot_moves_in_robot_loop():
-    frames, _ = vr.load_frames("scenes/robot_loop.json")  # resolves relative to scripts/
-    xs = {round(d["robot"]["pos"][0], 3) for _, d in frames}
-    assert len(xs) > 50
-    heading = frames[5][1]["robot"]["heading"]
-    assert -math.pi < heading <= math.pi
+def test_objects_sweep_across_the_view_and_come_back_with_the_same_id():
+    frames, _ = vr.load_frames("scenes/drive_around.json")  # resolves relative to scripts/
+    by_t = {round(t, 1): d for t, d in frames}
+    chair = lambda t: next((o for o in by_t[t]["objects"] if o["id"] == 1), None)  # noqa: E731
+    assert chair(0.0)["pos"][0] > chair(4.0)["pos"][0]      # the robot turns right: the chair slides left
+    assert chair(8.0) is None                                 # out of view
+    assert chair(15.0) is not None                            # back again, same id
+    bottle = {round(t, 1): o for t, d in frames for o in d["objects"] if o["id"] == 2}
+    assert max(bottle[9.5]["size"]) > 3 * max(bottle[5.0]["size"])  # it grows as the robot drives up
 
 
 def test_scene_semantics():
-    frames, _ = vr.load_frames("crisp_packet_dropped.json")
+    frames, _ = vr.load_frames("object_dropped.json")
     by_t = dict(frames)
     assert all(o["id"] != 9 for o in by_t[4.0]["objects"])
-    assert any(o["id"] == 9 and o["cls"] == "object" for o in by_t[6.0]["objects"])
+    assert any(o["id"] == 9 and o["cls"] == "teddy bear" for o in by_t[6.0]["objects"])
     assert by_t[4.0]["giants"] and by_t[4.0]["giants"][0]["edge"] == "top"
     assert by_t[8.0]["giants"] == []
     hand = dict(vr.load_frames("hand_enters.json")[0])
-    assert hand[4.5]["robot"]["seen"] is False and hand[1.0]["robot"]["seen"] is True
+    assert hand[4.5]["giants"][0]["kind"] == "hand" and hand[1.0]["giants"] == []
 
 
 def test_recording_round_trip(tmp_path):
-    frames, _ = vr.load_frames("static_table.json")
+    frames, _ = vr.load_frames("static_view.json")
     rec = tmp_path / "run.jsonl"
     rec.write_text("".join(json.dumps({"t": t, "data": d}) + "\n" for t, d in frames[:5]))
     again, scene = vr.load_frames(rec)
@@ -81,7 +83,7 @@ def test_recording_round_trip(tmp_path):
 
 
 def test_pause_shifts_schedule_and_inject_adds_hand():
-    frames, scene = vr.load_frames("static_table.json")
+    frames, scene = vr.load_frames("static_view.json")
     frames = frames[:6]
     controls = vr.Controls()
     got = []
@@ -101,7 +103,7 @@ def test_pause_shifts_schedule_and_inject_adds_hand():
 
 
 def test_loop_continues_past_end():
-    frames, scene = vr.load_frames("static_table.json")
+    frames, scene = vr.load_frames("static_view.json")
     frames = frames[:3]
     controls = vr.Controls()
     got = []

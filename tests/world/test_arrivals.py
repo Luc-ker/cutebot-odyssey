@@ -31,7 +31,7 @@ class FakeHub:
 def vstate(objs=(), giants=()):
     return {"frame_ts": 0, "objects": [{"id": i, "cls": c, "pos": [0.5, 0.5], "size": [0.05, 0.05], "conf": 1}
                                        for i, c in objs],
-            "robot": None, "giants": list(giants)}
+            "giants": list(giants)}
 
 
 async def _no_snapshot():
@@ -40,7 +40,8 @@ async def _no_snapshot():
 
 def make(request_role=None, timeout=4.0, clock=time.time):
     hub = FakeHub()
-    arr = Arrivals(hub, {"OBJECT_GRACE_S": 5}, registry=ObjectRegistry({"OBJECT_GRACE_S": 5}),
+    cfg = {"VIEW_GRACE_S": 0.5, "OBJECT_FORGET_S": 5}
+    arr = Arrivals(hub, cfg, registry=ObjectRegistry(cfg),
                    memory=RoleMemory(), request_role=request_role, vocab=STUB_VOCAB,
                    fetch_snapshot=_no_snapshot, clock=clock, gemini_timeout_s=timeout).attach()
     return hub, arr
@@ -153,7 +154,7 @@ def test_at_most_two_gemini_calls_in_flight():
     asyncio.run(main())
 
 
-def test_pending_until_world_then_removed_after_grace():
+def test_pending_until_world_then_removed_when_forgotten():
     now = [0.0]
 
     async def main():
@@ -192,11 +193,11 @@ def test_objects_expire_when_vision_goes_silent():
         await hub.pub("world.current", {"world": WORLD, "previous_id": None})
         arr.handle_vision(vstate([(1, "bottle")]), t[0])
         await _settle(arr)
-        # vision stops: nothing happens inside the grace period...
+        # vision stops: the object drops out of view but is remembered...
         t[0] += 3.0
         assert arr.expire_if_idle(t[0]) == []
-        assert arr.registry.get(1) is not None
-        # ...and the object is removed once it has passed
+        assert arr.registry.get(1) is not None and arr.registry.get(1).visible is False
+        # ...and is forgotten once OBJECT_FORGET_S has passed
         t[0] += 2.5
         assert arr.expire_if_idle(t[0]) == [1]
         await _settle(arr)
@@ -230,7 +231,7 @@ def test_background_expiry_loop_removes_silent_objects():
 
     async def main():
         hub, arr = make()
-        arr.registry.grace_s = 0.2
+        arr.registry.forget_s = 0.2
         old_idle, old_tick = arrivals_mod.VISION_IDLE_S, arrivals_mod.EXPIRY_TICK_S
         arrivals_mod.VISION_IDLE_S, arrivals_mod.EXPIRY_TICK_S = 0.1, 0.02
         try:

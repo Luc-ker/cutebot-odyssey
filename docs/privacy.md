@@ -4,16 +4,17 @@
 
 **We don't know who you are, and we don't keep what we see or hear.**
 
-## What the cameras do
+## What the camera does
 
-- **The overhead camera** (above the table, on the Jetson) looks for objects, the robot, and hands or people
-  reaching over the table. Hands and people are seen only as **shapes** so they can appear as giants in the
-  game. **No face is detected, recognised, identified or stored.** We use a general object detector
-  (YOLO), with no face model.
-- **The snapshot** the overhead camera sends to Gemini (so it can see the table) has people **blurred**
-  before it leaves the Jetson, and it is never saved.
-- **The phone on the robot** streams live video straight to the screen through the AI video model. Nothing
-  is recorded.
+There is one camera: **the phone on the robot**, looking ahead at table height.
+
+- It streams live video to the laptop's screen through the AI video model. Nothing is recorded.
+- A few times a second the laptop looks at a small copy of the frame to find objects, and hands or people
+  reaching into the robot's view. Hands and people are seen only as **shapes and colour regions** so they
+  can appear as giants in the game. **No face is detected, recognised, identified or stored.** We use a
+  general object detector (YOLO), with no face model. These frames only exist in memory, for a moment.
+- **The snapshot** sent to Gemini (so it can see what the robot sees) has people **blurred** before it leaves
+  the vision service, and it is never saved.
 
 ## What the microphone does
 
@@ -24,14 +25,15 @@
 
 ## What is kept
 
-- Only game state: which object on the table has which role in which world (for example "object 3 is the
-  castle"), so roles stay the same while you play. This is cleared with the reset button.
+- Only game state: which object has which role in which world (for example "object 3 is the castle"), and a
+  small colour histogram per object so it can be recognised when the robot sees it again. These stay in
+  memory while you play and are cleared with the reset button.
 - Logs record events and timings. They never contain audio, images or video (the logger replaces any such
   data with its size, e.g. `<112000 bytes>`).
 
 ## Your choices
 
-- Step back from the table and you leave the world: the giant disappears.
+- Keep your hands out of the robot's view and you stay out of the world: the giant disappears.
 - The narration is short, AI-generated and in-world. It is a story, not a statement of fact.
 
 ## How we check this
@@ -51,6 +53,6 @@ The test includes a deliberately planted `cv2.imwrite` to prove it catches one. 
 
 ## Third-party services
 
-The audio clip and the blurred table snapshot go to **Google Gemini**; the robot's camera stream goes to the
+The audio clip and the blurred robot's-view snapshot go to **Google Gemini**; the robot's camera stream goes to the
 **AI video model** for restyling. Both are processed under those providers' API terms. We do not ask them
 to store anything.

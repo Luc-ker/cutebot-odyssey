@@ -1,6 +1,6 @@
 # Gemini evaluation
 
-Place eight short, owned or royalty-free WAV clips and two overhead table JPEGs at the paths in `cases.json`. The files are intentionally not committed; keep local music and photo assets out of version control.
+Place eight short, owned or royalty-free WAV clips and two robot's-eye JPEGs (photos taken from the phone on the robot, at table height) at the paths in `cases.json`. The files are intentionally not committed; keep local music and photo assets out of version control.
 
 For live requests, install the official `google-genai` SDK (`python -m pip install google-genai`) and set `GEMINI_API_KEY` in the environment.
 

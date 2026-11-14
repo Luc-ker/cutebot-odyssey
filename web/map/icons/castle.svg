@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "castle" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M8 56V18h4v4h3v-4h4v4h3v-4h0V56Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M42 56V18h4v4h3v-4h4v4h3v-4V56Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M22 56V30h3v4h4v-4h6v4h4v-4h3v26Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M28 56v-9a4 4 0 0 1 8 0v9Z" fill="#2b1d0e"/>
-<path d="M15 18V6l8 3-8 3" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><rect x="13" y="28" width="4" height="6" rx="2" fill="#2b1d0e"/><rect x="47" y="28" width="4" height="6" rx="2" fill="#2b1d0e"/>
-</svg>

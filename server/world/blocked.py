@@ -1,7 +1,9 @@
 """T60 — Physical-block detection.
 
 The robot is blocked when ``robot.state.distance_cm`` < ``SAFETY_STOP_CM + 2``
-for more than 1 s while its position has not changed by more than 1 cm.
+for more than 1 s while that distance has not changed by more than 1.5 cm (it is
+held at the obstacle, not driving past it). There is no position on the table, so
+the steady sensor reading is what says the robot isn't moving.
 Then ``world.event blocked {obstacle}`` is published, once per blocking episode
 and at most every 6 s. The obstacle word is the facing object's (or cluster's)
 name if there is one, else a word for the world's setting.
@@ -9,14 +11,11 @@ name if there is one, else a word for the world's setting.
 
 from __future__ import annotations
 
-import math
 import time
 
 DEFAULT_SAFETY_STOP_CM = 8.0
-DEFAULT_TABLE_W_CM = 120.0
-DEFAULT_TABLE_H_CM = 80.0
 HOLD_S = 1.0
-STILL_CM = 1.0
+STILL_CM = 1.5
 COOLDOWN_S = 6.0
 
 # First matching keyword in the setting/name wins.
@@ -46,8 +45,6 @@ class BlockedDetector:
     def __init__(self, config: dict | None = None):
         config = config or {}
         self.limit_cm = float(config.get("SAFETY_STOP_CM", DEFAULT_SAFETY_STOP_CM)) + 2
-        self.w_cm = float(config.get("TABLE_W_CM", DEFAULT_TABLE_W_CM))
-        self.h_cm = float(config.get("TABLE_H_CM", DEFAULT_TABLE_H_CM))
         self.reset()
 
     def reset(self):
@@ -56,21 +53,15 @@ class BlockedDetector:
         self.fired = False
         self.last_fired: float | None = None
 
-    def _moved_cm(self, a, b) -> float:
-        if a is None or b is None:
-            return 0.0
-        return math.hypot((a[0] - b[0]) * self.w_cm, (a[1] - b[1]) * self.h_cm)
-
     def update(self, robot: dict, now: float, world: dict | None = None,
                names: dict | None = None) -> dict | None:
         """``names`` maps target id → name (objects and clusters from world.objects)."""
         d = (robot or {}).get("distance_cm")
-        pos = (robot or {}).get("pos")
         if d is None or d >= self.limit_cm:
             self.since, self.anchor, self.fired = None, None, False
             return None
-        if self.since is None or self._moved_cm(pos, self.anchor) > STILL_CM:
-            self.since, self.anchor, self.fired = now, pos, False
+        if self.since is None or abs(d - self.anchor) > STILL_CM:
+            self.since, self.anchor, self.fired = now, d, False
             return None
         if self.fired or now - self.since <= HOLD_S:
             return None

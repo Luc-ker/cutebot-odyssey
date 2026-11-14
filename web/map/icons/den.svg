@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "den" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M2 56C6 30 16 16 32 16s26 14 30 40Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M16 56c0-14 6-24 16-24s16 10 16 24Z" fill="#2b1d0e"/>
-<circle cx="27" cy="44" r="2" fill="#f0c94a"/><circle cx="37" cy="44" r="2" fill="#f0c94a"/><path d="M14 24l4 4M46 22l-3 5" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-</svg>

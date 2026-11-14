@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "giant_hand" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M20 60V34c-2-4-8-8-10-12-1-3 2-5 5-3l7 7V8a3 3 0 0 1 6 0v18-22a3 3 0 0 1 6 0v22-20a3 3 0 0 1 6 0v20-14a3 3 0 0 1 6 0v28c0 8-4 12-6 16v4Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M28 26v6M34 26v6M40 26v6" stroke="#2b1d0e" stroke-width="1.5" opacity=".5"/>
-</svg>

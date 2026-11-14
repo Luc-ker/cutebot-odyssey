@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "neon_arcade" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<rect x="10" y="20" width="44" height="36" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><rect x="16" y="26" width="32" height="16" rx="2" fill="#2b1d0e"/>
-<path d="M20 38l6-8 6 6 4-4 8 6" stroke="#ff4fa3" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M14 20 18 8h28l4 12" fill="#ff4fa3" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round"/><path d="M24 14h16" stroke="#fff4dc" stroke-width="2.5" stroke-linecap="round"/>
-<circle cx="24" cy="49" r="3" fill="#4fd8ff"/><circle cx="40" cy="49" r="3" fill="#ff4fa3"/>
-</svg>

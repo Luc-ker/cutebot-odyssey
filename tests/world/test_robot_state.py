@@ -5,18 +5,16 @@ from server.world import robot_state as mod
 from server.world.robot_state import RobotStateAggregator
 
 
-def fake_facing(robot, objects, clusters=None):
+def fake_facing(objects, clusters=None):
     return objects[0]["id"] if objects else None
 
 
 def test_merges_both_sources():
     agg = RobotStateAggregator(facing_fn=fake_facing)
-    agg.on_vision({"objects": [{"id": 3, "pos": [0.6, 0.5]}],
-                   "robot": {"pos": [0.5, 0.5], "heading": 0.1, "seen": True}, "giants": []})
+    agg.on_vision({"objects": [{"id": 3, "pos": [0.6, 0.5]}], "giants": []})
     agg.on_telemetry({"distance_cm": 22, "line": [0, 0], "override": True}, now=10.0)
     s = agg.snapshot(10.5)
-    assert s == {"pos": [0.5, 0.5], "heading": 0.1, "seen": True, "distance_cm": 22,
-                 "override": True, "facing_id": 3}
+    assert s == {"distance_cm": 22, "override": True, "facing_id": 3}
 
 
 def test_stale_telemetry_is_null():
@@ -27,17 +25,17 @@ def test_stale_telemetry_is_null():
     assert agg.snapshot(10.9)["distance_cm"] == 22
 
 
-def test_lost_robot_keeps_last_pose_unseen():
-    agg = RobotStateAggregator(facing_fn=fake_facing)
-    agg.on_vision({"objects": [], "robot": {"pos": [0.2, 0.3], "heading": 1.0, "seen": True}})
-    agg.on_vision({"objects": [], "robot": None})
-    s = agg.snapshot(0)
-    assert s["pos"] == [0.2, 0.3] and s["seen"] is False
+def test_real_facing_uses_the_view():
+    agg = RobotStateAggregator({"CAMERA_HFOV_DEG": 60})
+    agg.on_world_objects({"objects": [{"id": 5, "pos": [0.5, 0.6], "size": [0.3, 0.4], "visible": True},
+                                      {"id": 6, "pos": [0.5, 0.6], "size": [0.6, 0.6], "visible": False}],
+                          "clusters": []})
+    assert agg.snapshot(0)["facing_id"] == 5
 
 
 def test_prefers_world_objects_for_facing():
     agg = RobotStateAggregator(facing_fn=fake_facing)
-    agg.on_vision({"objects": [{"id": 3, "pos": [0.6, 0.5]}], "robot": None})
+    agg.on_vision({"objects": [{"id": 3, "pos": [0.6, 0.5]}], "giants": []})
     agg.on_world_objects({"objects": [{"id": 9, "pos": [0.6, 0.5]}], "clusters": []})
     assert agg.snapshot(0)["facing_id"] == 9
 

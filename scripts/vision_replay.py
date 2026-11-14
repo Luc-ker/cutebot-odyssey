@@ -1,17 +1,19 @@
-"""Play fake or recorded `vision.state` into the hub, so everything can be built without the Jetson (T47).
+"""Play fake or recorded `vision.state` into the hub, so everything can be built without the robot (T47).
 
-    python scripts/vision_replay.py scenes/robot_loop.json             # synthetic scene, looped
+    python scripts/vision_replay.py scenes/drive_around.json           # synthetic scene, looped
     python scripts/vision_replay.py my_run.jsonl --once                 # a recording, played once
     python scripts/vision_replay.py --record my_run.jsonl               # record live vision.state
     options: --hub ws://localhost:8765/hub  --speed 2  --once
 
 Keys while replaying (in a terminal): space = pause/resume, g = a hand reaches in from a random edge, q = quit.
 
-Scene JSON (see scripts/scenes/): positions are normalised table coords, times in seconds.
+Scenes are what the robot's camera sees (see scripts/scenes/). Positions and sizes are view units (C1): the
+frame is 0..1 left to right and top to bottom. Times are in seconds. A keyframe is [t, [x, y], [w, h]];
+positions and sizes are interpolated between keyframes.
     {"name", "duration_s", "hz": 10,
-     "objects": [{"id", "cls", "size": [w, h], "path": [[t, [x, y]], ...], "appear": t?, "remove": t?}],
-     "robot":   {"path": [[t, [x, y]], ...]}  or  {"circle": {"centre": [x, y], "radius": r, "period_s": s}},
-     "giants":  [{"id", "kind", "edge", "size": [w, h], "path": [[t, [x, y]], ...]}]}   # present during its path
+     "objects": [{"id", "cls", "conf"?, "seen": [[keyframe, ...], ...]}],   # each list is one stretch in view
+     "giants":  [{"id", "kind", "edge", "path": [keyframe, ...]}]}         # in view during its path
+An object that leaves the view and comes back keeps its id, as the vision service's re-id would give it.
 Recordings are JSONL lines {"t": seconds since start, "data": <vision.state>}: state only, never images.
 """
 from __future__ import annotations
@@ -19,7 +21,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import math
 import random
 import sys
 import time
@@ -40,58 +41,43 @@ def _clamp01(v: float) -> float:
     return min(max(float(v), 0.0), 1.0)
 
 
-def interp(path: list, t: float) -> list[float]:
-    """Linear interpolation along [[t, [x, y]], ...]; holds the ends."""
-    if t <= path[0][0]:
-        return list(path[0][1])
-    for (t0, p0), (t1, p1) in zip(path, path[1:]):
-        if t0 <= t <= t1:
-            a = 0.0 if t1 == t0 else (t - t0) / (t1 - t0)
-            return [p0[0] + a * (p1[0] - p0[0]), p0[1] + a * (p1[1] - p0[1])]
-    return list(path[-1][1])
+def interp(keys: list, t: float) -> tuple[list[float], list[float]]:
+    """Linear interpolation of position and size along [[t, [x, y], [w, h]], ...]; holds the ends."""
+    def at(k):
+        return list(k[1]), list(k[2] if len(k) > 2 else [0.1, 0.1])
+
+    if t <= keys[0][0]:
+        return at(keys[0])
+    for k0, k1 in zip(keys, keys[1:]):
+        if k0[0] <= t <= k1[0]:
+            a = 0.0 if k1[0] == k0[0] else (t - k0[0]) / (k1[0] - k0[0])
+            (p0, s0), (p1, s1) = at(k0), at(k1)
+            return ([p0[i] + a * (p1[i] - p0[i]) for i in range(2)],
+                    [s0[i] + a * (s1[i] - s0[i]) for i in range(2)])
+    return at(keys[-1])
 
 
-def _robot_at(robot: dict, t: float, duration: float) -> tuple[list[float], float]:
-    if "circle" in robot:
-        c = robot["circle"]
-        w = 2 * math.pi / float(c.get("period_s", 10))
-        ang = w * t
-        pos = [c["centre"][0] + c["radius"] * math.cos(ang), c["centre"][1] + c["radius"] * math.sin(ang)]
-        heading = ang + math.pi / 2  # tangent, moving clockwise on screen (y down)
-    else:
-        path = robot["path"]
-        pos = interp(path, t)
-        ahead = interp(path, min(t + 0.1, path[-1][0]))
-        behind = interp(path, max(t - 0.1, path[0][0]))
-        dx, dy = ahead[0] - behind[0], ahead[1] - behind[1]
-        heading = math.atan2(dy, dx) if (dx or dy) else float(robot.get("heading", 0.0))
-    heading = math.atan2(math.sin(heading), math.cos(heading))
-    return [_clamp01(pos[0]), _clamp01(pos[1])], heading
+def _in(keys: list, t: float) -> bool:
+    return keys[0][0] <= t <= keys[-1][0]
 
 
 def state_at(scene: dict, t: float, extra_giants: list[dict] | None = None) -> dict:
     objects = []
     for o in scene.get("objects", []):
-        if t < o.get("appear", 0) or (o.get("remove") is not None and t >= o["remove"]):
-            continue
-        pos = interp(o["path"], t)
-        objects.append({"id": int(o["id"]), "cls": o["cls"], "pos": [_clamp01(pos[0]), _clamp01(pos[1])],
-                        "size": [_clamp01(v) for v in o.get("size", [0.08, 0.08])],
-                        "conf": float(o.get("conf", 0.9))})
-    robot = None
-    if scene.get("robot"):
-        r = scene["robot"]
-        hidden = any(a <= t < b for a, b in r.get("hidden", []))
-        pos, heading = _robot_at(r, t, scene.get("duration_s", 10))
-        robot = {"pos": pos, "heading": heading, "seen": not hidden}
+        stretch = next((k for k in o.get("seen", []) if _in(k, t)), None)
+        if stretch is None:
+            continue  # out of view right now
+        pos, size = interp(stretch, t)
+        objects.append({"id": int(o["id"]), "cls": o["cls"], "pos": [_clamp01(v) for v in pos],
+                        "size": [_clamp01(v) for v in size], "conf": float(o.get("conf", 0.9))})
     giants = []
     for g in list(scene.get("giants", [])) + list(extra_giants or []):
-        if not (g["path"][0][0] <= t <= g["path"][-1][0]):
+        if not _in(g["path"], t):
             continue
-        pos = interp(g["path"], t)
-        giants.append({"id": g["id"], "kind": g.get("kind", "hand"), "pos": [_clamp01(pos[0]), _clamp01(pos[1])],
-                       "size": [_clamp01(v) for v in g.get("size", [0.15, 0.1])], "edge": g["edge"]})
-    return {"frame_ts": 0.0, "objects": objects, "robot": robot, "giants": giants}
+        pos, size = interp(g["path"], t)
+        giants.append({"id": g["id"], "kind": g.get("kind", "hand"), "pos": [_clamp01(v) for v in pos],
+                       "size": [_clamp01(v) for v in size], "edge": g["edge"]})
+    return {"frame_ts": 0.0, "objects": objects, "giants": giants}
 
 
 def scene_frames(scene: dict) -> list[Frame]:
@@ -117,14 +103,16 @@ def load_frames(path: str | Path) -> tuple[list[Frame], dict | None]:
 
 
 def hand_from(edge: str, start: float, gid: str) -> dict:
-    """A hand that reaches 0.25 in from `edge` and back over 2 s, starting at scene time `start`."""
-    y = random.uniform(0.25, 0.75)
+    """A hand that reaches into the view from `edge` and back out over 2 s, starting at scene time `start`."""
+    c = random.uniform(0.3, 0.7)
     outside, inside = {
-        "left": ([0.0, y], [0.25, y]), "right": ([1.0, y], [0.75, y]),
-        "top": ([y, 0.0], [y, 0.25]), "bottom": ([y, 1.0], [y, 0.75]),
+        "left": (([0.05, c], [0.1, 0.2]), ([0.2, c], [0.4, 0.3])),
+        "right": (([0.95, c], [0.1, 0.2]), ([0.8, c], [0.4, 0.3])),
+        "top": (([c, 0.05], [0.2, 0.1]), ([c, 0.3], [0.3, 0.6])),
+        "bottom": (([c, 0.95], [0.2, 0.1]), ([c, 0.7], [0.3, 0.6])),
     }[edge]
-    return {"id": gid, "kind": "hand", "edge": edge, "size": [0.15, 0.12],
-            "path": [[start, outside], [start + 0.8, inside], [start + 1.2, inside], [start + 2.0, outside]]}
+    return {"id": gid, "kind": "hand", "edge": edge,
+            "path": [[start, *outside], [start + 0.8, *inside], [start + 1.2, *inside], [start + 2.0, *outside]]}
 
 
 # ---------------------------------------------------------------------------- replay

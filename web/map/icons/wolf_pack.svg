@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "wolf_pack" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M4 52c2-10 8-14 14-14l2-8 4 6h4l3-6 1 8c4 2 6 8 6 14Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M30 46c2-12 10-18 18-18l3-10 4 8h3l3-8 1 10c2 4 2 12 0 18Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="22" cy="42" r="1.6" fill="#f0c94a"/><circle cx="50" cy="32" r="1.8" fill="#f0c94a"/><circle cx="56" cy="32" r="1.8" fill="#f0c94a"/>
-</svg>

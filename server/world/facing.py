@@ -5,18 +5,25 @@ prompt and the Shout button.
 
 Contract (C7)::
 
-    facing(robot_state, objects, clusters=None) -> int | None
+    facing(objects, clusters=None) -> int | None
 
-Candidates are inside a cone of ``FACING_HALF_ANGLE_DEG`` and ``FACING_MAX_DIST``
-(table units) around the robot heading. Cost = distance × (1 + angle / half_angle),
-lowest wins, so the nearest wins unless it is far off-axis.
+The camera looks where the robot looks, so "in front" means near the middle of
+the view. Candidates are objects in view (``visible`` not false) that
 
-Hysteresis: the current target is kept while it is still in the cone, unless
+* are within ``FACING_HALF_ANGLE_DEG`` of straight ahead (the angle comes from the
+  object's x in the view and the camera's ``CAMERA_HFOV_DEG``), and
+* take up at least ``FACING_MIN_SIZE`` of the view (smaller ones are far away).
+
+Cost = (1 + angle / half_angle) / size, lowest wins: the biggest (nearest) wins
+unless it is far off-centre.
+
+Hysteresis: the current target is kept while it is still a candidate, unless
 another candidate's cost is at least 20 % lower.
 
-Clusters (T52) count as targets too. **Choice:** cluster ids are plain ints from
-``100001`` upwards (T52's ``CLUSTER_ID_BASE``), so the result stays a single int
-that fits ``robot.state.facing_id: int | None``; consumers look the id up in
+Clusters (T52) count as targets too, with their own ``size`` if they have one.
+**Choice:** cluster ids are plain ints from ``100001`` upwards (T52's
+``CLUSTER_ID_BASE``), so the result stays a single int that fits
+``robot.state.facing_id: int | None``; consumers look the id up in
 ``world.objects.clusters`` when it is ``>= 100000``.
 
 ``FacingTracker`` holds the hysteresis state; ``facing()`` uses a shared default.
@@ -26,22 +33,12 @@ from __future__ import annotations
 
 import math
 
-DEFAULT_HALF_ANGLE_DEG = 25.0
-DEFAULT_MAX_DIST = 0.35
+from server.common.geometry import bearing, view_size
+
+DEFAULT_HALF_ANGLE_DEG = 15.0
+DEFAULT_MIN_SIZE = 0.08
+DEFAULT_HFOV_DEG = 65.0
 SWITCH_MARGIN = 0.2
-
-try:  # T06
-    from server.common.geometry import angle_diff, angle_to, dist
-except ImportError:  # until T06 lands
-    def dist(a, b):
-        return math.hypot(b[0] - a[0], b[1] - a[1])
-
-    def angle_to(a, b):
-        return math.atan2(b[1] - a[1], b[0] - a[0])
-
-    def angle_diff(a, b):
-        d = (a - b) % (2 * math.pi)
-        return d - 2 * math.pi if d > math.pi else d
 
 
 def _get(o, key, default=None):
@@ -52,35 +49,34 @@ class FacingTracker:
     def __init__(self, config: dict | None = None):
         config = config or {}
         self.half_angle = math.radians(float(config.get("FACING_HALF_ANGLE_DEG", DEFAULT_HALF_ANGLE_DEG)))
-        self.max_dist = float(config.get("FACING_MAX_DIST", DEFAULT_MAX_DIST))
+        self.min_size = float(config.get("FACING_MIN_SIZE", DEFAULT_MIN_SIZE))
+        self.hfov_deg = float(config.get("CAMERA_HFOV_DEG", DEFAULT_HFOV_DEG))
         self.current: int | None = None
 
     def reset(self):
         self.current = None
 
-    def _cost(self, pos, heading, target) -> float | None:
-        d = dist(pos, target)
-        if d > self.max_dist:
+    def cost(self, target) -> float | None:
+        if _get(target, "visible", True) is False:
             return None
-        if d < 1e-9:
-            return 0.0
-        a = abs(angle_diff(angle_to(pos, target), heading))
+        pos = _get(target, "pos")
+        if pos is None:
+            return None
+        size = view_size(_get(target, "size")) or self.min_size
+        if size < self.min_size:
+            return None
+        a = abs(bearing(pos[0], self.hfov_deg))
         if a > self.half_angle:
             return None
-        return d * (1 + a / self.half_angle)
+        return (1 + a / self.half_angle) / size
 
-    def update(self, robot, objects, clusters=None) -> int | None:
-        pos = _get(robot or {}, "pos")
-        heading = _get(robot or {}, "heading")
-        if pos is None or heading is None:
-            self.current = None
-            return None
+    def update(self, objects, clusters=None) -> int | None:
         costs: dict[int, float] = {}
         for t in list(objects or []) + list(clusters or []):
-            tpos, tid = _get(t, "pos"), _get(t, "id")
-            if tpos is None or tid is None:
+            tid = _get(t, "id")
+            if tid is None:
                 continue
-            c = self._cost(pos, heading, tpos)
+            c = self.cost(t)
             if c is not None:
                 costs[tid] = c
         if not costs:
@@ -97,5 +93,5 @@ class FacingTracker:
 _default = FacingTracker()
 
 
-def facing(robot, objects, clusters=None, tracker: FacingTracker | None = None) -> int | None:
-    return (tracker or _default).update(robot, objects, clusters)
+def facing(objects, clusters=None, tracker: FacingTracker | None = None) -> int | None:
+    return (tracker or _default).update(objects, clusters)

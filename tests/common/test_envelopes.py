@@ -8,7 +8,7 @@ from server.common.schemas import SCHEMA_DIR, check_envelope, known_topics, vali
 DOC = json.loads((SCHEMA_DIR / "topics.schema.json").read_text())
 SAMPLES = DOC["_samples"]
 
-C3_TOPICS = """vision.state robot.telemetry robot.cmd gamepad.button audio.beat audio.features world.current
+C3_TOPICS = """vision.state camera.frame robot.telemetry robot.cmd gamepad.button audio.beat audio.features world.current
 world.transition world.objects robot.state world.event narration.say narration.speak narration.done sfx.play
 video.prompt video.status webrtc.signal system.health system.reset world.select""".split()
 

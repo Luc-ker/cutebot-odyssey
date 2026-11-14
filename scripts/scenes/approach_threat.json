@@ -1,0 +1,72 @@
+{
+ "name": "approach_threat",
+ "duration_s": 10,
+ "hz": 10,
+ "description": "The robot drives straight at a book until it fills the view (7 s), then backs off (recoil).",
+ "objects": [
+  {
+   "id": 4,
+   "cls": "book",
+   "seen": [
+    [
+     [
+      0,
+      [
+       0.5,
+       0.62
+      ],
+      [
+       0.1,
+       0.06
+      ]
+     ],
+     [
+      2,
+      [
+       0.5,
+       0.62
+      ],
+      [
+       0.12,
+       0.07
+      ]
+     ],
+     [
+      7,
+      [
+       0.5,
+       0.6
+      ],
+      [
+       0.6,
+       0.35
+      ]
+     ],
+     [
+      9,
+      [
+       0.5,
+       0.62
+      ],
+      [
+       0.15,
+       0.09
+      ]
+     ],
+     [
+      10,
+      [
+       0.5,
+       0.62
+      ],
+      [
+       0.15,
+       0.09
+      ]
+     ]
+    ]
+   ]
+  }
+ ],
+ "giants": []
+}

@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "catacombs" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M4 56V26a28 22 0 0 1 56 0v30Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M16 56V36a16 14 0 0 1 32 0v20Z" fill="#2b1d0e"/>
-<circle cx="32" cy="44" r="5" fill="#fff4dc"/><path d="M30 44h1M33 44h1" stroke="#2b1d0e" stroke-width="2"/><path d="M29 49h6" stroke="#fff4dc" stroke-width="3"/>
-<path d="M10 22l2-6 2 6" fill="#f2a03d"/><path d="M52 22l-2-6-2 6" fill="#f2a03d"/><path d="M12 22v8M52 22v8" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-</svg>

@@ -5,8 +5,10 @@ Each scenario runs the real modules on the real hub and ends with "no unhandled 
 
 * Gemini always failing → the current world holds, Gemini is reported unhealthy, new objects still get
   a role from the local picker, and ``world.select`` still switches to a fallback world.
-* Vision stops seeing the robot → ``robot.state`` keeps the last pose with ``seen: false``.
-* ``vision.state`` stops entirely → objects stay for the grace period, then are removed; nothing crashes.
+* The robot turns away from what it was facing → ``robot.state.facing_id`` clears, the object stays known
+  (out of view) with its role, and is faced again when it comes back.
+* ``vision.state`` stops entirely (phone or vision service down) → objects drop out of view but stay known
+  until ``OBJECT_FORGET_S``, then are removed; nothing crashes.
 * The bridge micro:bit is unplugged → driving is unaffected (it is radio only, gamepad → Cutebot; the
   laptop bridge never carries drive packets), the bridge reports ``system.health ok:false`` and recovers
   when plugged back in.
@@ -85,61 +87,63 @@ def test_gemini_down_world_holds_and_select_still_works():
     asyncio.run(go())
 
 
-# ---- robot lost by the camera -------------------------------------------------------------------------------
+# ---- the robot turns away ----------------------------------------------------------------------------------
 
 
-def test_robot_unseen_keeps_last_pose():
+def test_turning_away_clears_facing_but_keeps_the_object():
     async def go():
         config = fakes.test_config()
         async with Harness(config) as h:
             await world_stack(h, config, FakeGemini())
-            h.scene.robot = {"pos": [0.42, 0.58], "heading": 1.2, "seen": True}
+            await h.pub("world.select", {"name": "kingdom"})
+            await h.wait_for("world.current")
+            h.scene.put(CHAIR, "chair", (0.5, 0.5), (0.2, 0.4))   # right in front
             h.feeding = True
-            await h.wait_for("robot.state", lambda d: d["seen"] is True and d["pos"] == [0.42, 0.58])
+            await h.wait_for("robot.state", lambda d: d["facing_id"] == CHAIR, timeout=3)
+            role = role_of(await h.latest("world.objects", lambda d: role_of(d, CHAIR) is not None), CHAIR)
 
-            h.scene.robot = None  # the Jetson stops finding the marker
+            away = h.scene.hide(CHAIR)  # the robot turns away
             m = h.mark()
-            lost = await h.wait_for("robot.state", lambda d: d["seen"] is False, after=m, timeout=1.0)
-            assert lost.data["pos"] == [0.42, 0.58] and lost.data["heading"] == 1.2
-            await h.settle(0.5)
-            for msg in h.find("robot.state", after=m)[-3:]:
-                assert msg.data["seen"] is False and msg.data["pos"] == [0.42, 0.58], "pose must freeze, not jump"
+            await h.wait_for("robot.state", lambda d: d["facing_id"] is None, after=m, timeout=1.5)
+            out = await h.wait_for("world.objects", lambda d: (o := object_in(d, CHAIR)) and o["visible"] is False,
+                                   after=m, timeout=1.5)
+            assert role_of(out.data, CHAIR) == role, "an object out of view keeps its role"
 
-            h.scene.robot = {"pos": [0.45, 0.6], "heading": 1.0, "seen": True}  # found again
-            await h.wait_for("robot.state", lambda d: d["seen"] is True and d["pos"] == [0.45, 0.6], after=m)
+            h.scene.objects[CHAIR] = away  # and back
+            await h.wait_for("robot.state", lambda d: d["facing_id"] == CHAIR, after=m, timeout=1.5)
             h.assert_no_errors()
 
     asyncio.run(go())
 
 
-# ---- the Jetson goes silent ----------------------------------------------------------------------------------
+# ---- vision goes silent -----------------------------------------------------------------------------------------
 
 GRACE_S = 1.0
 
 
 async def vision_goes_silent(check_removal: bool):
-    config = fakes.test_config(OBJECT_GRACE_S=GRACE_S)
+    config = fakes.test_config(OBJECT_FORGET_S=GRACE_S, VIEW_GRACE_S=0.2)
     async with Harness(config) as h:
         await world_stack(h, config, FakeGemini())
         await h.pub("world.select", {"name": "kingdom"})
         await h.wait_for("world.current")
         h.scene.put(CHAIR, "chair", (0.3, 0.4))
-        h.scene.robot = {"pos": [0.6, 0.6], "heading": 0.0, "seen": True}
         h.feeding = True
         await h.wait_for("world.objects", lambda d: role_of(d, CHAIR) is not None, timeout=3)
 
         h.feeding = False  # vision.state stops entirely
         m = h.mark()
-        await h.settle(GRACE_S * 0.5)
+        await h.settle(GRACE_S * 0.75)
         objs = await h.latest("world.objects")
-        assert object_in(objs, CHAIR), "objects must stay during the grace period"
+        assert object_in(objs, CHAIR), "objects must stay known until OBJECT_FORGET_S"
+        assert object_in(objs, CHAIR)["visible"] is False, "with no frames nothing is in view"
         assert h.find("robot.state", after=m), "robot.state must keep publishing"
 
         if check_removal:
             await h.wait_for("world.event", lambda d: d.get("kind") == "object_removed" and d["id"] == CHAIR,
                              after=m, timeout=GRACE_S + 1.5)
             objs = await h.latest("world.objects")
-            assert not object_in(objs, CHAIR), "objects must be removed after the grace period"
+            assert not object_in(objs, CHAIR), "objects must be removed after OBJECT_FORGET_S"
         else:
             m2 = h.mark()
             await h.settle(GRACE_S + 1.0)
@@ -172,7 +176,6 @@ def test_bridge_unplugged_reports_and_recovers():
         async with Harness(config) as h:
             await world_stack(h, config, FakeGemini())
             await h.start("serial_bridge", bridge)
-            h.scene.robot = {"pos": [0.5, 0.5], "heading": 0.0, "seen": True}
             h.feeding = True
             await h.wait_for("system.health", lambda d: d.get("service") == "serial_bridge" and d["ok"] is True,
                              timeout=3)

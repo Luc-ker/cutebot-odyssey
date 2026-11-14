@@ -1,40 +1,13 @@
-// Table geometry helpers for browser pages (T06, contracts C1/C9).
-// Table coords are normalised [x, y] in 0..1, origin top-left, y down.
+// View geometry helpers for browser pages (T06, contracts C1/C9).
+// View coords are normalised [x, y] in 0..1 of the robot camera's frame, origin top-left, y down.
 
-let tableAspect = 1.5; // TABLE_W_CM / TABLE_H_CM; call setTableSize() with the real config values.
-
-export function setTableSize(wCm, hCm) {
-  if (wCm > 0 && hCm > 0) tableAspect = wCm / hCm;
+/** View coords -> pixels in `rect` ({x, y, width, height}; a DOMRect works; x/y default to 0). */
+export function toScreen([x, y], rect) {
+  return [(rect.x || 0) + x * rect.width, (rect.y || 0) + y * rect.height];
 }
 
-export function getTableAspect() {
-  return tableAspect;
-}
-
-// The largest rect with the table's aspect ratio, centred (letterboxed) inside `rect`.
-// `rect` is {x, y, width, height} (a DOMRect works); x/y default to 0.
-export function fitRect(rect, aspect = tableAspect) {
-  const rx = rect.x || 0;
-  const ry = rect.y || 0;
-  const rw = rect.width;
-  const rh = rect.height;
-  let w = rw;
-  let h = rw / aspect;
-  if (h > rh) {
-    h = rh;
-    w = rh * aspect;
-  }
-  return { x: rx + (rw - w) / 2, y: ry + (rh - h) / 2, width: w, height: h };
-}
-
-export function toScreen([x, y], rect, aspect = tableAspect) {
-  const r = fitRect(rect, aspect);
-  return [r.x + x * r.width, r.y + y * r.height];
-}
-
-export function fromScreen([px, py], rect, aspect = tableAspect) {
-  const r = fitRect(rect, aspect);
-  return [(px - r.x) / r.width, (py - r.y) / r.height];
+export function fromScreen([px, py], rect) {
+  return [(px - (rect.x || 0)) / rect.width, (py - (rect.y || 0)) / rect.height];
 }
 
 export function dist(a, b) {
@@ -43,4 +16,10 @@ export function dist(a, b) {
 
 export function angleTo(a, b) {
   return Math.atan2(b[1] - a[1], b[0] - a[0]);
+}
+
+/** Angle (radians) from straight ahead to view x, for a camera with horizontal field of view `hfovDeg`. */
+export function bearing(x, hfovDeg) {
+  const half = (hfovDeg * Math.PI) / 360;
+  return Math.atan((2 * x - 1) * Math.tan(half));
 }

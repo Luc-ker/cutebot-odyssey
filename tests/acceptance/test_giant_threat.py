@@ -1,8 +1,8 @@
 """T108 — acceptance: the demo's big moment (whitepaper §7.10, §7.11, §12 "1:05–1:25").
 
-A hand on the table becomes a giant (with a narration line); an object dropped while the hand is there arrives
-"from the sky" and, forced by the fake Gemini, is a threat; driving the robot into its danger radius makes it
-recoil: ``robot.cmd recoil``, ``sfx.play warning``, a red light flash, and an ``R,<ms>`` packet on the bridge
+A hand reaching into the robot's view becomes a giant (with a narration line); an object set down while the hand
+is there arrives "from the sky" and, forced by the fake Gemini, is a threat; driving the robot up to it (it grows
+in the view until it passes ``DANGER_SIZE``) makes it recoil: ``robot.cmd recoil``, ``sfx.play warning``, a red light flash, and an ``R,<ms>`` packet on the bridge
 micro:bit's serial port.
 
 Real hub and real modules: arrivals (T50), objects publisher (T62), giants (T61), robot state (T55),
@@ -30,11 +30,11 @@ from server.world.memory import RoleMemory  # noqa: E402
 from server.world.registry import ObjectRegistry  # noqa: E402
 from server.world.worlds import WorldRegistry  # noqa: E402
 
-CHAIR, CRISPS = 1, 7
-CRISPS_AT = (0.60, 0.50)
-HAND = {"id": 1, "kind": "hand", "pos": [0.62, 0.22], "size": [0.12, 0.16], "edge": "top"}
-THREAT = {"role": "dragon", "name": "the Crisp Wyrm", "behaviour": "threat",
-          "announce": "A dragon of crackling foil drops from the sky!"}
+CHAIR, TEDDY = 1, 7
+TEDDY_AT = (0.52, 0.60)
+HAND = {"id": 1, "kind": "hand", "pos": [0.5, 0.3], "size": [0.3, 0.6], "edge": "top"}
+THREAT = {"role": "dragon", "name": "the Fuzzy Wyrm", "behaviour": "threat",
+          "announce": "A dragon of matted fur drops from the sky!"}
 
 ANNOUNCE_WITHIN_S = 3.0   # §10 "new object to role assigned and announced: a few seconds"
 GIANT_WITHIN_S = 1.0      # 300 ms debounce (T61) plus hub hops
@@ -76,13 +76,12 @@ async def run_big_moment(check_serial: bool):
 
         await h.pub("world.select", {"name": "kingdom"})
         await h.wait_for("world.current")
-        h.scene.put(CHAIR, "chair", (0.25, 0.30), (0.12, 0.14))
-        h.scene.robot = {"pos": [0.10, 0.90], "heading": 0.0, "seen": True}
+        h.scene.put(CHAIR, "chair", (0.15, 0.50), (0.12, 0.40))
         h.feeding = True
         await h.wait_for("world.event", lambda d: d.get("kind") == "object_added" and d["id"] == CHAIR, timeout=5)
         await h.settle(0.5)
 
-        # ---- a hand reaches over the table → a giant, and the narrator says so ---------------------------
+        # ---- a hand reaches into the view → a giant, and the narrator says so -----------------------------
         m = h.mark()
         h.scene.giants = [dict(HAND)]
         enter = await h.wait_for("world.event", lambda d: d.get("kind") == "giant_enter", after=m,
@@ -93,17 +92,17 @@ async def run_big_moment(check_serial: bool):
         assert say.t >= enter.t
         await h.wait_for("narration.speak", lambda d: d["text"] == say.data["text"], after=m, timeout=1.0)
 
-        # ---- drop a crisp packet while the hand is there → from the sky, a threat -------------------------
+        # ---- set a teddy bear down while the hand is there → from the sky, a threat -----------------------
         gemini.forced_role = dict(THREAT)
         m = h.mark()
-        h.scene.put(CRISPS, "object", CRISPS_AT, (0.06, 0.05))
+        h.scene.put(TEDDY, "teddy bear", TEDDY_AT, (0.08, 0.1))
         dropped_at = h.messages[-1].t if h.messages else 0.0
-        added = await h.wait_for("world.event", lambda d: d.get("kind") == "object_added" and d["id"] == CRISPS,
+        added = await h.wait_for("world.event", lambda d: d.get("kind") == "object_added" and d["id"] == TEDDY,
                                  after=m, timeout=ANNOUNCE_WITHIN_S)
         assert added.data["from_sky"] is True
         assert added.data["behaviour"] == "threat" and added.data["role"] == "dragon"
         assert added.t - dropped_at <= ANNOUNCE_WITHIN_S
-        await h.wait_for("world.objects", lambda d: (o := object_in(d, CRISPS)) and o["behaviour"] == "threat"
+        await h.wait_for("world.objects", lambda d: (o := object_in(d, TEDDY)) and o["behaviour"] == "threat"
                          and o["from_sky"] is True, after=m, timeout=1.0)
         await h.wait_for("narration.say", lambda d: d["text"] == THREAT["announce"], after=m, timeout=1.0)
 
@@ -111,16 +110,14 @@ async def run_big_moment(check_serial: bool):
         h.scene.giants = []
         await h.wait_for("world.event", lambda d: d.get("kind") == "giant_leave", after=m, timeout=2.0)
 
-        # ---- drive into the danger radius → recoil ---------------------------------------------------------
+        # ---- drive up to it: it grows in the view past DANGER_SIZE → recoil ----------------------------------
         m = h.mark()
         serial_mark = len(device.written)
-        start, end = h.scene.robot["pos"], [CRISPS_AT[0] - 0.05, CRISPS_AT[1] + 0.05]
         for i in range(1, 11):
-            k = i / 10
-            h.scene.robot = {"pos": [start[0] + (end[0] - start[0]) * k, start[1] + (end[1] - start[1]) * k],
-                             "heading": -0.6, "seen": True}
+            size = 0.1 + 0.035 * i          # 0.135 .. 0.45 of the view
+            h.scene.objects[TEDDY]["size"] = [size * 0.8, size]
             await asyncio.sleep(0.1)
-        danger = await h.wait_for("world.event", lambda d: d.get("kind") == "danger_enter" and d["id"] == CRISPS,
+        danger = await h.wait_for("world.event", lambda d: d.get("kind") == "danger_enter" and d["id"] == TEDDY,
                                   after=m, timeout=2.0)
         recoil = await h.wait_for("robot.cmd", lambda d: d.get("kind") == "recoil", after=m, timeout=REACT_WITHIN_S)
         warning = await h.wait_for("sfx.play", lambda d: d.get("sound") == "warning", after=m, timeout=REACT_WITHIN_S)
@@ -141,7 +138,7 @@ async def run_big_moment(check_serial: bool):
             assert [ln for _, ln in device.written[serial_mark:] if ln.startswith("L,F,255,0,0")], "red flash not written"
 
         # and the narrator warns
-        await h.wait_for("narration.say", lambda d: "Crisp Wyrm" in d["text"] and d["priority"] == 3,
+        await h.wait_for("narration.say", lambda d: "Fuzzy Wyrm" in d["text"] and d["priority"] == 3,
                          after=m, timeout=1.0)
 
         # ---- the whole story, in order -----------------------------------------------------------------------

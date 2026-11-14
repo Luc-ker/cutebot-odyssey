@@ -2,14 +2,17 @@
 
 Publishes ``world.objects`` every 100 ms (C3)::
 
-    {world_id, objects: [{id, cls, pos, size, role, name, behaviour, cluster_id, from_sky}],
-     clusters: [{id, pos, member_ids, role, name}], terrain}
+    {world_id, objects: [{id, cls, pos, size, visible, role, name, behaviour, cluster_id, from_sky}],
+     clusters: [{id, pos, size, member_ids, role, name}], terrain}
 
-* Objects come from the shared ``ObjectRegistry`` (T48); roles from ``RoleMemory``
-  (T49) for the current world, falling back to the world's own ``roles`` list.
-  Objects without a role yet have ``role/name/behaviour: null``.
-* Clusters (T52) and terrain (T53) are recomputed at most twice a second.
-* ``from_sky`` from an ``object_added`` event is carried for 3 s so the map can
+* Objects come from the shared ``ObjectRegistry`` (T48): every object the robot has
+  discovered, with ``visible`` saying whether it is in view now (``pos``/``size`` are
+  where it was last seen in the view). Roles come from ``RoleMemory`` (T49) for the
+  current world, falling back to the world's own ``roles`` list. Objects without a
+  role yet have ``role/name/behaviour: null``.
+* Clusters (T52) are grouped from the objects in view; they and the terrain words
+  (T53) are recomputed at most twice a second.
+* ``from_sky`` from an ``object_added`` event is carried for 3 s so the eye can
   animate the landing.
 """
 
@@ -50,13 +53,13 @@ def _default_analyse():
         from server.world.terrain import analyse  # T53
         return analyse
     except ImportError:
-        return lambda objects, world: {"open_regions": [], "open_space": None, "under_table": None}
+        return lambda objects, world: {"open_space": None, "under_table": None}
 
 
 def _as_dict(c) -> dict:
     if isinstance(c, dict):
         return c
-    return {"id": c.id, "pos": c.pos, "member_ids": c.member_ids,
+    return {"id": c.id, "pos": c.pos, "size": getattr(c, "size", None) or [0.0, 0.0], "member_ids": c.member_ids,
             "role": getattr(c, "role", None), "name": getattr(c, "name", None)}
 
 
@@ -123,7 +126,7 @@ class ObjectsPublisher:
         raw = self.registry.all()
         if self._computed_at is None or now - self._computed_at >= RECOMPUTE_S:
             self._recompute([{"id": _get(o, "id"), "pos": _get(o, "pos"), "size": _get(o, "size")}
-                             for o in raw], now)
+                             for o in raw if _get(o, "visible", True)], now)
         cluster_of = {m: c["id"] for c in self._clusters for m in c.get("member_ids", [])}
         for obj_id, until in list(self.from_sky_until.items()):
             if until <= now:
@@ -136,6 +139,7 @@ class ObjectsPublisher:
             objects.append({
                 "id": obj_id, "cls": _get(o, "cls"), "pos": list(_get(o, "pos")),
                 "size": list(_get(o, "size") or [0, 0]),
+                "visible": bool(_get(o, "visible", True)),
                 "role": role.get("role"), "name": role.get("name"), "behaviour": role.get("behaviour"),
                 "cluster_id": cluster_of.get(obj_id),
                 "from_sky": obj_id in self.from_sky_until,

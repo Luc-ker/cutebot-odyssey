@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-<!-- Genrator map icon "ash_field" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
-<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
-<path d="M4 50c8-6 16-6 24-2s16 4 32-2v10H4Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M12 46c2-6 4-10 2-16M34 46c0-6 4-10 0-18M50 44c2-4 2-8 0-12" stroke="#8a8178" stroke-width="3" fill="none" stroke-linecap="round"/>
-<circle cx="18" cy="20" r="2" fill="#8a8178"/><circle cx="40" cy="14" r="2.5" fill="#8a8178"/><circle cx="28" cy="10" r="1.5" fill="#8a8178"/><circle cx="52" cy="24" r="1.5" fill="#8a8178"/>
-</svg>
