@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genrator.local/shared/schemas/world.schema.json",
+  "title": "World",
+  "description": "A composed world (contract C4, whitepaper §7.7 and §9).",
+  "type": "object",
+  "required": ["id", "world", "roles", "terrain", "restyle_prompt", "narration", "music_signature"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^w-[0-9a-f]{8}$"},
+    "world": {
+      "type": "object",
+      "required": ["name", "setting", "mood", "time_of_day", "weather", "palette"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 40},
+        "setting": {"type": "string", "minLength": 1, "maxLength": 80},
+        "mood": {"type": "string", "minLength": 1, "maxLength": 40},
+        "time_of_day": {"type": "string", "minLength": 1, "maxLength": 40},
+        "weather": {"type": "string", "minLength": 1, "maxLength": 40},
+        "palette": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"type": "string", "minLength": 1, "maxLength": 40}
+        }
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["object_id", "role", "name", "behaviour"],
+        "properties": {
+          "object_id": {"type": "integer", "minimum": 0},
+          "role": {"type": "string", "minLength": 1, "maxLength": 40},
+          "name": {"type": "string", "minLength": 1, "maxLength": 40},
+          "behaviour": {"enum": ["friendly", "neutral", "threat"]}
+        }
+      }
+    },
+    "terrain": {
+      "type": "object",
+      "required": ["open_space", "under_table"],
+      "properties": {
+        "open_space": {"type": "string", "minLength": 1, "maxLength": 80},
+        "under_table": {"type": "string", "minLength": 1, "maxLength": 80}
+      }
+    },
+    "restyle_prompt": {"type": "string", "minLength": 1, "maxLength": 400},
+    "narration": {"type": "string", "maxLength": 300},
+    "music_signature": {
+      "type": "object",
+      "required": ["tempo_bpm", "energy", "brightness", "chroma"],
+      "properties": {
+        "tempo_bpm": {"type": "number", "minimum": 0},
+        "energy": {"type": "number", "minimum": 0, "maximum": 1},
+        "brightness": {"type": "number", "minimum": 0, "maximum": 1},
+        "chroma": {"type": "array", "minItems": 12, "maxItems": 12, "items": {"type": "number"}}
+      }
+    }
+  }
+}

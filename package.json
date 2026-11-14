@@ -1,0 +1,8 @@
+{
+  "name": "sonar-bot-tune",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test web/"
+  }
+}
