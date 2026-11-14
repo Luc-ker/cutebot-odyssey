@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "robot_sentinel" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<rect x="16" y="16" width="32" height="26" rx="6" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><rect x="22" y="22" width="20" height="10" rx="5" fill="#2b1d0e"/><circle cx="32" cy="27" r="3.5" fill="#d8402f"/>
+<path d="M32 16V8" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="32" cy="7" r="2.5" fill="#d8402f"/><path d="M22 42l-4 14M42 42l4 14M16 26H8v12M48 26h8v12" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

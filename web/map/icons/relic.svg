@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "relic" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<path d="M18 56h28l-4-8H22Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M22 48V40h20v8" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M32 6 42 22 32 38 22 22Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M32 14 37 22 32 30 27 22Z" fill="#fff4dc"/>
+<path d="M14 18l-4-2M50 18l4-2M16 30h-5M48 30h5" stroke="#f0c94a" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "bridge" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<path d="M2 36h60v8H2Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 56V44c0-12 18-12 18 0v12M38 56V44c0-12 18-12 18 0v12" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M2 36v-6M14 36v-6M26 36v-6M38 36v-6M50 36v-6M62 36v-6M2 30h60" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 58c3-2 6 1 9 0M40 58c3-2 6 1 9 0" fill="none" stroke="#7cc4e8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

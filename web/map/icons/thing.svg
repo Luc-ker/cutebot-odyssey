@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "thing" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<path d="M32 8 54 20v24L32 56 10 44V20Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 20l22 12 22-12M32 32v24" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M28 18c0-4 8-4 8 0 0 3-4 3-4 6" stroke="#fff4dc" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+</svg>

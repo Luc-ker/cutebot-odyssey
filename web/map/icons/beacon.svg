@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "beacon" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<path d="M18 56 24 36h16l6 20Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M20 36h24l-3-5H23Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M32 4c6 8 12 12 12 20a12 12 0 0 1-24 0c0-6 5-8 6-14 2 4 4 5 6 6 0-4 0-8 0-12Z" fill="#f2a03d" stroke="#2b1d0e" stroke-width="2" stroke-linejoin="round"/><path d="M32 18c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 3-5 5-9Z" fill="#ffe08a"/>
+</svg>

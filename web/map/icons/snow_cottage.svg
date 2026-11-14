@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "snow_cottage" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<rect x="12" y="32" width="40" height="24" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M6 34 32 12l26 22Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M6 34c4 2 8-2 12 0s8-2 12 0 8-2 12 0 8-2 16 0l-3-3H9Z" fill="#fff" stroke="#2b1d0e" stroke-width="2"/>
+<rect x="18" y="38" width="9" height="8" fill="#f2a03d" stroke="#2b1d0e" stroke-width="2"/><path d="M36 56V42h10v14Z" fill="#2b1d0e"/><path d="M42 20v-8h5v12" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

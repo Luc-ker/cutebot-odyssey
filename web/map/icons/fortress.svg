@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "fortress" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<path d="M6 56 10 24l6 6 5-10 6 8 5-14 5 14 6-8 5 10 6-6 4 32Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M26 56V44l6-5 6 5v12Z" fill="#2b1d0e"/><path d="M16 38l3 3M45 38l3 3M30 28h4" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="18" cy="46" r="2" fill="#d8402f"/><circle cx="46" cy="46" r="2" fill="#d8402f"/>
+</svg>

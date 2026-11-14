@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Genrator · Map</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0b0a09; overflow: hidden; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    #conn {
+      position: fixed; right: 12px; bottom: 10px; padding: 4px 10px; border-radius: 999px;
+      font: 12px ui-sans-serif, system-ui, sans-serif; color: #f3d9c9; background: rgba(120, 30, 20, .8);
+    }
+    #help {
+      position: fixed; left: 12px; bottom: 10px; font: 12px ui-sans-serif, system-ui, sans-serif;
+      color: rgba(255, 255, 255, .35); pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="map"></canvas>
+  <div id="conn" hidden>Hub offline</div>
+  <div id="help">F fullscreen · ?demo for a self-running demo</div>
+  <script type="module" src="./map.js"></script>
+</body>
+</html>

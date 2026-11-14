@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "treasure" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<path d="M10 34h44v22H10Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 34c0-12 44-12 44 0Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 40h44M28 34v8h8v-8" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M14 30c4-6 10-8 18-8s14 2 18 8" fill="#f0c94a" stroke="#2b1d0e" stroke-width="2"/><circle cx="22" cy="24" r="3" fill="#f0c94a" stroke="#2b1d0e" stroke-width="1.5"/><circle cx="40" cy="22" r="3" fill="#f0c94a" stroke="#2b1d0e" stroke-width="1.5"/>
+<path d="M48 14l2 4 4 1-4 2-2 4-2-4-4-1 4-2Z" fill="#fff4dc"/>
+</svg>

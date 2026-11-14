@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "jaguar" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<path d="M6 48c4-10 14-14 26-14 8-6 16-6 20 0 4 2 6 6 6 10-4 2-8 2-10 0-2 6-8 10-14 10H10Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M44 30l2-6 4 4M10 48c-6 0-6-8-2-10" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><circle cx="52" cy="38" r="1.8" fill="#f0c94a"/>
+<circle cx="20" cy="42" r="2" fill="#2b1d0e"/><circle cx="28" cy="40" r="2" fill="#2b1d0e"/><circle cx="34" cy="46" r="2" fill="#2b1d0e"/><circle cx="24" cy="48" r="2" fill="#2b1d0e"/>
+<path d="M14 52v6M24 52v6M36 52v6M44 50v6" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "docking_tower" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<rect x="26" y="14" width="12" height="42" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 26h44M12 40h40" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="6" y="22" width="10" height="8" rx="2" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><rect x="48" y="22" width="10" height="8" rx="2" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><rect x="10" y="36" width="8" height="8" rx="2" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><rect x="46" y="36" width="8" height="8" rx="2" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="32" cy="10" r="4" fill="#f2a03d" stroke="#2b1d0e" stroke-width="2" stroke-linejoin="round"/><circle cx="32" cy="24" r="2" fill="#7cc4e8"/><circle cx="32" cy="34" r="2" fill="#7cc4e8"/><circle cx="32" cy="44" r="2" fill="#7cc4e8"/>
+</svg>

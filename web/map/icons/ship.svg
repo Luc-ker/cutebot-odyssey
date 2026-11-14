@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "ship" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<path d="M6 40h52l-8 14H14Z" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M32 40V6M18 40V14" fill="none" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M34 8c12 4 16 14 16 26H34Z" fill="#fff4dc" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M20 16c8 3 10 10 10 20H20Z" fill="#fff4dc" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M32 6l10 3-10 3" fill="#d8402f" stroke="#2b1d0e" stroke-width="2"/>
+<circle cx="22" cy="47" r="2" fill="#2b1d0e"/><circle cx="32" cy="47" r="2" fill="#2b1d0e"/><circle cx="42" cy="47" r="2" fill="#2b1d0e"/><path d="M2 58c6-3 10 3 16 0s10 3 16 0 10 3 16 0 10 3 12 1" fill="none" stroke="#7cc4e8" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

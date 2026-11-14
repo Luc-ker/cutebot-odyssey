@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+<!-- Genrator map icon "grove" (T88). Self-made. Main fill is currentColor so the map can tint it. -->
+<ellipse cx="32" cy="58.5" rx="24" ry="3.5" fill="#000" opacity=".18"/>
+<rect x="12.5" y="42" width="3.0" height="8.0" fill="#2b1d0e"/><circle cx="14" cy="37.0" r="8.0" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><rect x="48.5" y="42" width="3.0" height="8.0" fill="#2b1d0e"/><circle cx="50" cy="37.0" r="8.0" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><rect x="30.05" y="36" width="3.9000000000000004" height="10.4" fill="#2b1d0e"/><circle cx="32" cy="29.5" r="10.4" fill="currentColor" stroke="#2b1d0e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="28" cy="28" r="2.2" fill="#d8402f"/><circle cx="36" cy="25" r="2.2" fill="#d8402f"/><circle cx="34" cy="33" r="2.2" fill="#f0c94a"/><circle cx="11" cy="36" r="2" fill="#d8402f"/><circle cx="53" cy="37" r="2" fill="#f0c94a"/>
+</svg>
