@@ -121,7 +121,7 @@ test enforces the no-recording and no-face-detection rules. Details: `docs/priva
 
 *(MLH rules require disclosing AI tools used to build the project. Edit this to be accurate for the whole team.)*
 
-**AI inside the product:** Google Gemini ([model, e.g. gemini-2.5-flash]) composes worlds, object roles and
+**AI inside the product:** Google Gemini ([model, e.g. gemini-3.8-flash]) composes worlds, object roles and
 narration from audio + image. [Video model] restyles the robot's camera feed in real time. A YOLO object detector
 runs on the laptop on the robot's camera frames.
 

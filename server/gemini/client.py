@@ -59,13 +59,16 @@ def _schema_dict(schema: dict) -> dict:
 async def ask_json(parts: list, schema: dict) -> dict:
     """Send multimodal parts and return parsed JSON, retrying one timeout or 5xx."""
     config = load_config()
-    timeout_s = float(config.get("GEMINI_TIMEOUT_S", 12.0))
-    model = str(config.get("GEMINI_MODEL", "gemini-2.5-flash"))
+    timeout_s = float(config.get("GEMINI_TIMEOUT_S", 30.0))
+    model = str(config.get("GEMINI_MODEL", "gemini-3.8-flash"))
     client = _get_client()
     request_config = {
         "response_mime_type": "application/json",
         "response_schema": _schema_dict(schema),
+        "max_output_tokens": 4096,
     }
+    if model.startswith("gemini-3.8"):
+        request_config["thinking_config"] = {"thinking_level": "low"}
     started = time.monotonic()
     for attempt in range(2):
         try:

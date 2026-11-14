@@ -73,8 +73,12 @@ def plan_services(args, config: dict) -> list[tuple[str, list[str], dict]]:
     """(name, argv, extra_env) for every subprocess, in start order."""
     py = sys.executable
     brain_env = {"GENRATOR_AUDIO_FILE": str(Path(args.audio_file).resolve())} if args.audio_file else {}
+    music_enabled = not args.no_music and config.get("MUSIC_ENABLED", True)
+    if not music_enabled:
+        brain_env["GENRATOR_MUSIC_ENABLED"] = "false"
+    skip = "bridge" if music_enabled else "bridge,audio"
     services = [("hub", [py, "-m", "server.hub"], {}),
-                ("brain", [py, "-m", "server.brain", "--skip", "bridge"], brain_env)]
+                ("brain", [py, "-m", "server.brain", "--skip", skip], brain_env)]
     if not args.no_bridge:
         services.append(("bridge", [py, "-m", "server.brain", "--only", "bridge"], {}))
     if args.replay:
@@ -248,6 +252,8 @@ async def amain(args) -> int:
         print("\n  Pages (open on any device on the same network):")
         for page, url in page_urls(config, lan_ip()).items():
             print(f"    {page:7} {url}")
+        if args.no_music or not config.get("MUSIC_ENABLED", True):
+            print("\n  Fixed Kingdom scene: microphone and music-driven world changes are off.")
         if args.no_bridge:
             print("\n  Robot/gamepad: independent; no USB bridge is started.")
             print("  Laptop robot lights/recoil/buttons/telemetry need the optional --bridge integration.")
@@ -283,6 +289,7 @@ async def amain(args) -> int:
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description="Start the laptop side of Genrator.")
     p.add_argument("--replay", metavar="SCENE", help="replay a recorded vision scene (scripts/scenes/<SCENE>.json)")
+    p.add_argument("--no-music", action="store_true", help="fixed Kingdom scene with camera/objects; no microphone or music-driven worlds")
     p.add_argument("--audio-file", metavar="WAV", help="feed this audio file to the pipeline instead of the mic")
     bridge = p.add_mutually_exclusive_group()
     bridge.add_argument("--bridge", dest="no_bridge", action="store_false",

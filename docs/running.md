@@ -19,7 +19,11 @@ cp .env.example .env                    # Windows: copy .env.example .env
 
 The app automatically loads `.env` from the repository root. Existing environment variables take
 precedence. Keep the key in your local `.env` (ignored by Git); `.env.example` contains no key. Restart
-the launcher after editing `.env`.
+the launcher after editing `.env`. The first valid Gemini world replaces the startup Kingdom fallback;
+subsequent calls keep the current world when the music has not meaningfully changed. The default model
+is `gemini-3.8-flash` with low thinking and a 30-second per-attempt timeout; override the model or timeout
+with `GENRATOR_GEMINI_MODEL` / `GENRATOR_GEMINI_TIMEOUT_S` if needed. Requests run one at a time per world
+scheduler, so a slow call delays the next one.
 
 Python 3.11+; Node 22+ is only needed for `npm test`. Without `ultralytics`, vision can still provide
 snapshots and heuristic hand detection but does not detect objects. Start it once on good internet to cache
@@ -51,6 +55,7 @@ The eye page must stay open because it forwards frames to vision. See [the physi
 
 ```bash
 python scripts/launch.py                         # normal two-micro:bit + phone build
+python scripts/launch.py --no-music              # initial Kingdom run: camera/objects, no microphone
 python scripts/launch.py --replay drive_around   # simulated vision for development
 python scripts/launch.py --audio-file song.wav   # audio file instead of laptop microphone
 python scripts/launch.py --no-vision              # laptop services without vision
@@ -75,6 +80,12 @@ your working gamepad firmware to connect the camera.
 The launcher waits up to 20 seconds for hub and brain. Live vision waits for the browser pages to connect,
 so it is not part of that initial health wait. Ctrl-C stops the launcher and all its services.
 Environment overrides use `GENRATOR_<KEY>`, for example `GENRATOR_AUDIO_DEVICE=2` or `GENRATOR_HUB_PORT=8766`.
+
+For an initial run without music, use `--no-music`. The scene starts in Kingdom; live camera, object
+roles and narration remain available. The microphone and audio modules are off, and music cannot change
+the world. The status page can still select other fallback worlds or reset to Kingdom. Object role
+assignment may use Gemini; local role assignment takes over if it is unavailable. Restart without
+`--no-music` when ready to test music-driven composition.
 
 ## Independent robot control
 

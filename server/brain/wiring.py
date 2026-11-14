@@ -133,7 +133,7 @@ def build_shared(config: dict, modules: list[ModuleSpec]) -> dict[str, Any]:
     shared["memory"] = _try("memory", memory)
     shared["worlds"] = _try("worlds", worlds)
 
-    if groups & {"audio", "gemini"}:
+    if config.get("MUSIC_ENABLED", True) and groups & {"audio", "gemini"}:
         def audio():
             from server.audio.capture import AudioInput
             return AudioInput(config).start()

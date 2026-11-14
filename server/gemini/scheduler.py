@@ -132,14 +132,18 @@ class WorldScheduler:
             if inspect.isawaitable(image_jpeg):
                 image_jpeg = await image_jpeg
             objects = [_object_dict(obj) for obj in self.object_registry.all()]
-            raw = await self.compose(audio_wav, image_jpeg, objects, self.current)
+            # A bundled fallback has never been composed from this session's music.
+            # Its example signature/setting must not suppress the first real result.
+            current_is_fallback = bool(self.current and self.world_registry.is_fallback(self.current.get("id")))
+            raw = await self.compose(audio_wav, image_jpeg, objects,
+                                     None if current_is_fallback else self.current)
             guarded = self.guard(raw, objects, self.vocab)
             if inspect.isawaitable(guarded):
                 guarded = await guarded
             if guarded is None:
                 raise ValueError("Gemini response failed world validation")
             guarded["music_signature"] = music_signature
-            if self.current:
+            if self.current and not current_is_fallback:
                 current_signature = self.current.get("music_signature")
                 setting = (guarded.get("world") or {}).get("setting", "").casefold()
                 current_setting = (self.current.get("world") or {}).get("setting", "").casefold()
@@ -228,9 +232,11 @@ async def run(hub, config: dict | None = None) -> None:
     from server.audio.capture import AudioInput
 
     config = config or load_config()
-    audio = AudioInput(config)
-    scheduler = WorldScheduler(hub, config, audio_input=audio, clip_store=ClipStore(audio),
-                               change_detector=ChangeDetector(audio.rate))
+    music_enabled = config.get("MUSIC_ENABLED", True)
+    audio = AudioInput(config) if music_enabled else None
+    scheduler = WorldScheduler(hub, config, audio_input=audio,
+                               clip_store=ClipStore(audio) if audio else None,
+                               change_detector=ChangeDetector(audio.rate) if audio else None)
     await scheduler.start()
 
     async def with_data(env: dict, fn):
@@ -241,8 +247,11 @@ async def run(hub, config: dict | None = None) -> None:
 
     async def on_reset(_env: dict):
         await scheduler.reset()
+        if not music_enabled:
+            await scheduler.start()
 
-    hub.sub("audio.features", lambda env: with_data(env, scheduler.on_audio_features))
+    if music_enabled:
+        hub.sub("audio.features", lambda env: with_data(env, scheduler.on_audio_features))
     hub.sub("vision.state", lambda env: with_data(env, scheduler.on_vision_state))
     hub.sub("world.select", on_world_select)
     hub.sub("system.reset", on_reset)
@@ -253,10 +262,12 @@ async def run(hub, config: dict | None = None) -> None:
         if scheduler.change_detector.update(samples, ts):
             loop.call_soon_threadsafe(scheduler.mark_changed)
 
-    audio.on_block(on_audio)
+    if audio:
+        audio.on_block(on_audio)
     try:
         try:
-            audio.start()
+            if audio:
+                audio.start()
         except Exception as exc:
             log.exception("audio capture unavailable; fallback world remains active")
             await scheduler._publish_health(False, str(exc))
@@ -264,4 +275,5 @@ async def run(hub, config: dict | None = None) -> None:
             await scheduler.tick()
             await asyncio.sleep(LOOP_SLEEP_S)
     finally:
-        audio.stop()
+        if audio:
+            audio.stop()

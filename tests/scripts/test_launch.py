@@ -42,3 +42,11 @@ def test_replay_service_arguments_are_accepted(monkeypatch):
     assert len(parsed) == 1 and not parsed[0].once
     assert parsed[0].source.endswith("drive_around.json")
     assert parsed[0].hub == "wss://127.0.0.1:8765/hub"
+
+
+def test_no_music_launch_skips_audio_and_marks_fixed_world_mode():
+    services = plan_services(parse_args(["--no-music"]), {})
+    _, argv, env = next(service for service in services if service[0] == "brain")
+    assert argv[-2:] == ["--skip", "bridge,audio"]
+    assert env["GENRATOR_MUSIC_ENABLED"] == "false"
+    assert "vision" in [name for name, _, _ in services]

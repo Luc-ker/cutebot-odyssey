@@ -99,3 +99,71 @@ def test_returning_signature_reuses_world_without_composition():
     asyncio.run(scenario())
     events = [data for topic, data in hub.messages if topic == "world.event"]
     assert events[-1]["returning"] is True
+
+def test_first_generated_world_replaces_fallback_even_with_similar_setting_and_music():
+    previous = []
+
+    async def compose(_audio, _image, _objects, current):
+        previous.append(current)
+        return world("The Music Kingdom", "medieval kingdom")
+
+    hub, scheduler = build_scheduler(compose, distance_fn=lambda _a, _b: 0.0)
+
+    async def scenario():
+        await scheduler.start()
+        fallback_id = scheduler.current["id"]
+        scheduler.silent = False
+        assert await scheduler.request_world(now=10) is True
+        assert scheduler.current["id"] != fallback_id
+        assert not scheduler.world_registry.is_fallback(scheduler.current["id"])
+        assert scheduler.current["world"]["name"] == "The Music Kingdom"
+        assert previous == [None]
+        # Once grounded in this music, repeating it should hold the generated world.
+        assert await scheduler.request_world(now=20) is False
+        assert previous[1]["id"] == scheduler.current["id"]
+
+    asyncio.run(scenario())
+
+
+def test_no_music_run_never_opens_microphone_and_reset_restores_kingdom(monkeypatch):
+    from server.gemini import scheduler as module
+    from server.audio import capture
+
+    def forbidden_audio(*_args, **_kwargs):
+        raise AssertionError("no-music mode must not allocate a microphone")
+
+    async def forbidden_composition(*_args, **_kwargs):
+        raise AssertionError("no-music mode must not request a music world")
+
+    class SubHub(Hub):
+        def __init__(self):
+            super().__init__()
+            self.handlers = {}
+
+        def sub(self, topic, callback):
+            self.handlers[topic] = callback
+
+    monkeypatch.setattr(capture, "AudioInput", forbidden_audio)
+    monkeypatch.setattr(module.WorldScheduler, "request_world", forbidden_composition)
+    monkeypatch.setattr(module, "LOOP_SLEEP_S", 0.001)
+
+    async def scenario():
+        hub = SubHub()
+        task = asyncio.create_task(module.run(hub, {"MUSIC_ENABLED": False}))
+        try:
+            await asyncio.sleep(0.02)
+            assert not task.done()
+            assert "audio.features" not in hub.handlers
+            worlds = [d["world"] for t, d in hub.messages if t == "world.current"]
+            assert worlds[-1]["world"]["name"] == "Kingdom"
+            await hub.handlers["system.reset"]({"data": {}})
+            worlds = [d["world"] for t, d in hub.messages if t == "world.current"]
+            assert len(worlds) >= 2
+            assert worlds[-1]["world"]["name"] == "Kingdom"
+        finally:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+    asyncio.run(scenario())
