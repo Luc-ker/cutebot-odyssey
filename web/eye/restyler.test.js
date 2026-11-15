@@ -117,7 +117,8 @@ test("Decart publishes an owned model-sized stream, refreshes tokens and cleans 
   const r = createRestyler({ RESTYLE_PROVIDER: "decart" }, {
     setInterval: () => 1, clearInterval() {},
     makeDecartSurface(options) {
-      assert.deepEqual(options, { width: 1280, height: 704, fps: 30, neutral: true });
+      // fill: the phone picture covers the whole model frame, no letterbox bars for Decart to paint.
+      assert.deepEqual(options, { width: 1280, height: 704, fps: 30, neutral: true, fill: true });
       return { async start(source) { assert.equal(source, input); return normalized; }, stop() { stopped++; } };
     },
     watchFrames(stream, onFrame) { assert.equal(stream, remote); onFrame(); return () => { unwatch++; }; },
@@ -131,6 +132,7 @@ test("Decart publishes an owned model-sized stream, refreshes tokens and cleans 
           assert.equal(await options.apiKeyProvider(), "ephemeral-1");
           assert.equal(await options.apiKeyProvider(), "ephemeral-2");
           assert.equal(settings.initialState.prompt.text, "Kingdom");
+          assert.equal(settings.initialState.prompt.enhance, true); // default lucy-2.6 edit model
           settings.onRemoteStream(remote);
           return rt;
         } } };
@@ -197,7 +199,7 @@ test("late Decart connection cannot replace or stop the next phone session", asy
   assert.deepEqual(stopped, ['old', 'new']);
 });
 
-import { stablePrompt } from "./restyler.js";
+import { stablePrompt, decartEnhance } from "./restyler.js";
 
 test("stablePrompt locks the Kingdom prompt only in stable mode", () => {
   assert.equal(stablePrompt({}), null);
@@ -205,7 +207,7 @@ test("stablePrompt locks the Kingdom prompt only in stable mode", () => {
   assert.equal(stablePrompt({ STABLE_KINGDOM_ENABLED: true, STABLE_KINGDOM_PROMPT: "  " }), null);
   assert.equal(stablePrompt({ STABLE_KINGDOM_ENABLED: true, STABLE_KINGDOM_PROMPT: " a miniature kingdom " }),
     "a miniature kingdom");
-  assert.equal(stablePrompt({ STABLE_KINGDOM_ENABLED: true, STABLE_KINGDOM_PROMPT: "y".repeat(500) }).length, 400);
+  assert.equal(stablePrompt({ STABLE_KINGDOM_ENABLED: true, STABLE_KINGDOM_PROMPT: "y".repeat(900) }).length, 750);
 });
 
 test("a prompt set before start reaches the renderer at connect time", async () => {
@@ -217,4 +219,10 @@ test("a prompt set before start reaches the renderer at connect time", async () 
   r.setPrompt("a miniature kingdom");
   await r.start({});
   assert.ok(seen[0].strength > 0); // "kingdom" tint applied from the first frame
+});
+
+test("prompt enhancement is on for Lucy edit models and off for the restyle model", () => {
+  assert.equal(decartEnhance(), true);
+  assert.equal(decartEnhance("lucy-2.6"), true);
+  assert.equal(decartEnhance("lucy-restyle-2"), false);
 });

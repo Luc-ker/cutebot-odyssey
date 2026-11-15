@@ -20,8 +20,9 @@ def test_shipped_config_turns_stable_mode_on_with_a_miniature_kingdom_prompt():
     cfg = load_config(env={})
     assert stable.enabled(cfg)
     text = stable.prompt(cfg)
-    assert len(text) <= 400
-    for phrase in ("miniature", "kingdom", "towering", "under the desk", "cave", "castle"):
+    assert len(text) <= 750
+    for phrase in ("miniature", "kingdom", "watchtower", "under the desk", "cave", "castle",
+                   "the output will show"):
         assert phrase in text.lower()
 
 
@@ -152,3 +153,5 @@ def test_renderer_config_exposes_effective_stable_settings(monkeypatch):
     cfg = renderer_config()
     assert cfg["STABLE_KINGDOM_ENABLED"] is True and "miniature" in cfg["STABLE_KINGDOM_PROMPT"]
     assert not any("KEY" in k for k in cfg)
+    monkeypatch.delenv("GENRATOR_DECART_MODEL", raising=False)
+    assert renderer_config()["DECART_MODEL"] == "lucy-2.6"

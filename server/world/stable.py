@@ -15,13 +15,13 @@ When stable mode is on:
 from __future__ import annotations
 
 DEFAULT_PROMPT = (
-    "First-person miniature view from a tiny explorer at ground level in a sunlit medieval kingdom: "
-    "everyday objects loom as huge stone buildings, a bottle is a towering watchtower, "
-    "the dark space under the desk is a vast cave, a gigantic castle rises in the far distance, "
-    "painterly fantasy, consistent style, consistent lighting, steady camera."
+    "Restyle the whole scene into a sunlit miniature medieval kingdom seen by a tiny explorer at ground level, "
+    "and replace bottles with tall stone watchtowers and laptops with castle fortress walls. "
+    "The output will show one continuous painterly fantasy landscape: the desk is a green meadow, "
+    "the dark space under the desk is a vast cave, and a gigantic castle rises in the far distance."
 )
 DEFAULT_SETTLE_S = 1.0
-MAX_CHARS = 400
+MAX_CHARS = 750  # Decart Lucy 2.6 prompt guidance: up to ~750 characters
 
 
 def enabled(config: dict | None) -> bool:

@@ -65,9 +65,13 @@ model and requesting origin, requires a same-origin custom-header request, and m
 `no-store`. The local hub is intended for a trusted LAN. The Eye status shows connection failures
 while keeping the raw camera usable. Set `GENRATOR_RESTYLE_PROVIDER=fake` for offline tint preview.
 The browser SDK is pinned to `@decartai/sdk@0.2.14`. Override the model with `GENRATOR_DECART_MODEL`;
-default `lucy-restyle-2`. Incoming phone frames are copied into an owned canvas stream at the
-model’s width, height and frame rate, preserving the full image with letterboxing. The SDK never owns
-the original phone camera track.
+default `lucy-2.6` (1280×720, 30 fps), Decart's realtime editing model: it can replace objects
+(a bottle becomes a watchtower), which `lucy-restyle-2` cannot; restyle only changes the look and keeps
+every shape. Lucy 2.6 costs $0.02 per second of rendering against $0.01 for `lucy-restyle-2`
+(Decart pricing page, 2026-11); set `GENRATOR_DECART_MODEL=lucy-restyle-2` for cheaper style-only runs.
+Incoming phone frames are copied into an owned canvas stream at the model’s width, height and frame
+rate, scaled to cover the whole frame (overflow cropped). Letterbox bars are avoided because the model
+paints them as separate scenery with visible seams. The SDK never owns the original phone camera track.
 
 ## Exact calls the adapter makes (Decart)
 
@@ -85,11 +89,11 @@ const client = createDecartClient({
   telemetry: false,
 });
 const rt = await client.realtime.connect(phoneStream, {
-  model: models.realtime("lucy-restyle-2"),
+  model: models.realtime("lucy-2.6"),
   onRemoteStream: (styled) => { video.srcObject = styled; },
-  initialState: { prompt: { text: firstPrompt, enhance: false } },
+  initialState: { prompt: { text: firstPrompt, enhance: true } },  // false for lucy-restyle-*
 });
-rt.setPrompt(nextPrompt, { enhance: false });  // on every video.prompt
+rt.setPrompt(nextPrompt, { enhance: true });   // on every video.prompt (never in stable Kingdom mode)
 rt.on("stats", s => ...);                       // WebRTC stats incl. glass-to-glass latency
 rt.on("error", e => ...);                       // e.code: INVALID_API_KEY, TOKEN_EXPIRED, WEB_RTC_ERROR, ...
 rt.disconnect();
@@ -97,11 +101,12 @@ rt.disconnect();
 
 Notes and open questions:
 
-- `enhance: false` keeps our composed prompts literal. With `enhance: true` (the default) Decart rewrites
-  them, which may look nicer but drifts from our world.
+- `enhance` is on for the Lucy 2.x edit models, as Decart's Lucy 2.6 prompting guide recommends, and
+  off for `lucy-restyle-*`, which gets our text literally. Lucy 2.6 prompts work best as a command
+  sentence followed by "The output will show ...", about 40–65 words and at most ~750 characters.
 - **Keys:** the hub mints restricted short-lived client tokens; the browser uses `apiKeyProvider` to refresh credentials before connecting or reconnecting. Never place the permanent key in shared config or browser storage.
-- **Model id:** the restyling page uses `lucy-restyle-2`. Check that our account has it. It can be
-  overridden with `GENRATOR_DECART_MODEL` in the local environment.
+- **Model id:** default `lucy-2.6`; override with `GENRATOR_DECART_MODEL` in the local environment
+  (for example `lucy-restyle-2`).
 - **Stats fields:** the adapter reads `latency.medianMs` / `medianMs` from the `stats` event as a best
   guess. Check the real payload in the spike page console and fix the field name if it differs.
 - **SDK version:** `DECART_SDK_URL` is pinned to `@decartai/sdk@0.2.14`.

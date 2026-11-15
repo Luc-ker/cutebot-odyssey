@@ -13,7 +13,14 @@ const STATUS_EVERY_MS = 500;
 
 // Decart realtime SDK (see docs/restyle-provider.md). Pin a version once the spike settles it.
 const DECART_SDK_URL = "https://esm.sh/@decartai/sdk@0.2.14";
-const DECART_MODEL = "lucy-restyle-2";
+// lucy-2.6 edits the scene (replaces objects); lucy-restyle-2 only changes style and keeps every shape.
+const DECART_MODEL = "lucy-2.6";
+
+/** Pure: Decart's prompt enhancer suits the Lucy 2.x edit models (their docs recommend it); the
+ * restyle model gets our text literally. */
+export function decartEnhance(modelName = DECART_MODEL) {
+  return !String(modelName).startsWith("lucy-restyle");
+}
 
 // ---------------------------------------------------------------------------------------------
 // Fake provider: tints the raw feed by prompt keywords. For development, tests, and offline use.
@@ -40,7 +47,7 @@ export function tintForPrompt(text = "") {
 }
 
 /** Browser surface: plays the input in a hidden <video>, draws tinted frames into a canvas. */
-function canvasSurface({ width, height, fps = 30, neutral = false } = {}) {
+function canvasSurface({ width, height, fps = 30, neutral = false, fill = false } = {}) {
   let video, canvas, output, raf, vfc, running = false, generation = 0;
   return {
     async start(stream, onFrame, getTint) {
@@ -64,7 +71,9 @@ function canvasSurface({ width, height, fps = 30, neutral = false } = {}) {
           if (!width && (canvas.width !== w || canvas.height !== h)) { canvas.width = w; canvas.height = h; }
           const { rgb, strength, dark } = getTint();
           ctx.filter = neutral ? "none" : `saturate(1.25) contrast(1.1)${dark ? " brightness(0.7)" : ""}`;
-          const scale = Math.min(canvas.width / w, canvas.height / h);
+          // fill: cover the whole model frame (crop the overflow) so the renderer never sees empty
+          // letterbox bars, which it paints as separate scenery with visible seams at the edges.
+          const scale = (fill ? Math.max : Math.min)(canvas.width / w, canvas.height / h);
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(video, (canvas.width - w * scale) / 2, (canvas.height - h * scale) / 2, w * scale, h * scale);
           ctx.filter = "none";
@@ -157,9 +166,11 @@ function decartProvider(config, deps, emitFrame) {
       try {
         const { createDecartClient, models } = await (deps.loadDecartSdk?.() ?? import(DECART_SDK_URL));
         if (!active(own)) throw new Error("Renderer stopped");
-        const model = models.realtime(config.DECART_MODEL ?? DECART_MODEL);
+        const modelName = config.DECART_MODEL ?? DECART_MODEL;
+        const model = models.realtime(modelName);
+        own.enhance = decartEnhance(modelName);
         const fps = typeof model.fps === "number" ? model.fps : model.fps?.ideal ?? model.fps?.max ?? 30;
-        own.surface = (deps.makeDecartSurface ?? canvasSurface)({ width: model.width, height: model.height, fps, neutral: true });
+        own.surface = (deps.makeDecartSurface ?? canvasSurface)({ width: model.width, height: model.height, fps, neutral: true, fill: true });
         const input = await own.surface.start(stream, () => {}, () => ({ rgb: [0, 0, 0], strength: 0, dark: false }));
         if (!active(own)) throw new Error("Renderer stopped");
         const decart = createDecartClient({
@@ -179,7 +190,7 @@ function decartProvider(config, deps, emitFrame) {
             });
             resolveOut(remote);
           },
-          initialState: { prompt: { text: prompt || "a painterly fantasy world", enhance: false } },
+          initialState: { prompt: { text: prompt || "a painterly fantasy world", enhance: own.enhance } },
         });
         if (!active(own)) throw new Error("Renderer stopped");
         own.client.on?.("stats", (stats) => {
@@ -196,7 +207,7 @@ function decartProvider(config, deps, emitFrame) {
     },
     setPrompt(text) {
       prompt = text;
-      if (session?.client) Promise.resolve(session.client.setPrompt(text, { enhance: false }))
+      if (session?.client) Promise.resolve(session.client.setPrompt(text, { enhance: session.enhance ?? false }))
         .catch(() => console.warn("[restyler/decart] prompt update failed"));
     },
     stop() {
@@ -212,7 +223,7 @@ export const PROVIDERS = { fake: fakeProvider, decart: decartProvider };
 export function stablePrompt(config = {}) {
   if (!config.STABLE_KINGDOM_ENABLED) return null;
   const text = String(config.STABLE_KINGDOM_PROMPT ?? "").trim();
-  return text ? text.slice(0, 400) : null;
+  return text ? text.slice(0, 750) : null;
 }
 
 // ---------------------------------------------------------------------------------------------

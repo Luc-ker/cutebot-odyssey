@@ -256,12 +256,12 @@ def test_decART_token_restricts_model_origin_and_redacts_provider_errors(monkeyp
     from server.hub import restyle
     from io import BytesIO
     monkeypatch.setenv('DECART_API_KEY', 'account-secret')
-    monkeypatch.setenv('GENRATOR_DECART_MODEL', 'lucy-restyle-2')
+    monkeypatch.setenv('GENRATOR_DECART_MODEL', 'lucy-2.6')
 
     def urlopen(request, timeout):
         assert request.full_url == 'https://api.decart.ai/v1/client/tokens'
         assert request.get_header('X-api-key') == 'account-secret'
-        assert json.loads(request.data) == {'expiresIn': 300, 'allowedModels': ['lucy-restyle-2'],
+        assert json.loads(request.data) == {'expiresIn': 300, 'allowedModels': ['lucy-2.6'],
                                             'allowedOrigins': ['https://laptop:8765']}
         return BytesIO(b'{"apiKey":"ephemeral","expiresAt":"soon","private":"account-secret"}')
 
