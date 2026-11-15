@@ -147,6 +147,19 @@
               },
               "conf": {
                 "$ref": "#/$defs/unit"
+              },
+              "outline": {
+                "type": "array",
+                "description": "Segmentation outline of the object in view units, at most 24 points.",
+                "maxItems": 64,
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "$ref": "#/$defs/unit"
+                  }
+                }
               }
             }
           }
@@ -184,6 +197,10 @@
               }
             }
           }
+        },
+        "client_ts": {
+          "type": "number",
+          "description": "The eye page clock (performance.now ms) for the frame this state came from: camera.frame.t echoed back."
         }
       }
     },
@@ -204,6 +221,10 @@
         "h": {
           "type": "integer",
           "minimum": 1
+        },
+        "t": {
+          "type": "number",
+          "description": "The eye page clock (performance.now ms) when the frame was grabbed; echoed as vision.state.client_ts."
         }
       }
     },

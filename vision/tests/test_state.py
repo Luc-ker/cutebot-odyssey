@@ -120,3 +120,25 @@ def test_hub_frames_read_and_latest():
     assert frames.latest()[0] == 5.0
     push({"topic": "camera.frame", "ts": 6.0, "data": {"jpeg": "rubbish"}})
     assert frames.bad == 1 and frames.latest()[0] == 5.0
+
+
+def test_outline_and_client_ts_in_view_units_and_schema():
+    t = Track(5, "bottle", [600, 300, 680, 420], 0.8, {"outline": [[600, 300], [680, 300], [700, 420], [-10, 420]]})
+    s = build_state([t, Track(6, "cup", [10, 10, 50, 50], 0.9)], [], SHAPE, 3.0, client_ts=12345.6)
+    assert s["client_ts"] == 12345.6
+    assert s["objects"][0]["outline"] == [[0.469, 0.417], [0.531, 0.417], [0.547, 0.583], [0.0, 0.583]]
+    assert "outline" not in s["objects"][1]
+    assert "client_ts" not in build_state([], [], SHAPE, 3.0)
+    if validate_envelope:
+        assert validate_envelope(envelope(s)) == []
+
+
+def test_hub_frames_remember_the_eye_timestamp_of_the_frame_read():
+    frames = HubFrames()
+    img = np.full((60, 80, 3), 128, np.uint8)
+    asyncio.run(frames.on_envelope({"ts": 1.0, "data": {"jpeg": _jpeg_b64(img), "t": 500.5}}))
+    frames.read(timeout=0.1)
+    assert frames.read_client_ts == 500.5
+    asyncio.run(frames.on_envelope({"ts": 2.0, "data": {"jpeg": _jpeg_b64(img)}}))
+    frames.read(timeout=0.1)
+    assert frames.read_client_ts is None

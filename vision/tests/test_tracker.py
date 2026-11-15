@@ -77,3 +77,13 @@ def test_low_confidence_keeps_track_but_does_not_start_one():
     tid = t.update([det(100, 100, conf=0.9)], DT)[0].id
     out = t.update([det(101, 100, conf=0.3)], 2 * DT)
     assert [o.id for o in out] == [tid]
+
+
+def test_outline_follows_the_track_and_is_never_stale():
+    t = Tracker()
+    first = Detection(box(100, 100), "cup", 0.9, {"outline": [[80, 80], [120, 80], [100, 120]]})
+    assert t.update([first], 0.0)[0].extra["outline"][0] == [80, 80]
+    moved = Detection(box(104, 100), "cup", 0.9, {"outline": [[84, 80], [124, 80], [104, 120]]})
+    assert t.update([moved], DT)[0].extra["outline"][0] == [84, 80]
+    plain = Detection(box(108, 100), "cup", 0.9)
+    assert "outline" not in t.update([plain], 2 * DT)[0].extra

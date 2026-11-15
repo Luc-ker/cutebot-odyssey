@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 190" width="220" height="190">
+  <defs>
+    <linearGradient id="wall" x1="0" x2="1"><stop offset="0" stop-color="#f4e6c6"/><stop offset="1" stop-color="#b9a47c"/></linearGradient>
+    <linearGradient id="thatch" x1="0" x2="1"><stop offset="0" stop-color="#e2b25c"/><stop offset="1" stop-color="#8f6426"/></linearGradient>
+    <linearGradient id="tile" x1="0" x2="1"><stop offset="0" stop-color="#d0563e"/><stop offset="1" stop-color="#7a2618"/></linearGradient>
+    <radialGradient id="grass" cx=".4" cy=".3"><stop offset="0" stop-color="#7fb04a"/><stop offset="1" stop-color="#3f6b26"/></radialGradient>
+  </defs>
+  <g fill="#c9c3b8" opacity=".7"><circle cx="190" cy="36" r="6"/><circle cx="196" cy="24" r="8"/><circle cx="188" cy="10" r="9"/></g>
+  <g stroke="#2e2118" stroke-width="2.5" stroke-linejoin="round">
+    <ellipse cx="110" cy="178" rx="106" ry="11" fill="url(#grass)"/>
+    <path d="M182 84V46h12v38z" fill="#8a7a66"/>
+    <path d="M128 96h70v78h-70z" fill="url(#wall)"/>
+    <path d="M120 100l43-44 43 44z" fill="url(#tile)"/>
+    <path d="M18 112h74v62H18z" fill="url(#wall)"/>
+    <path d="M8 116l47-48 47 48z" fill="url(#thatch)"/>
+    <path d="M76 140h66v38H76z" fill="url(#wall)"/>
+    <path d="M68 144l41-36 41 36z" fill="url(#thatch)"/>
+    <path d="M100 178v-24h16v24zM40 174v-28h16v28zM150 174v-30h16v30z" fill="#5a3a22"/>
+  </g>
+  <g fill="#ffd36b"><rect x="66" y="128" width="12" height="12" rx="2"/><rect x="176" y="112" width="12" height="12" rx="2"/><rect x="124" y="152" width="10" height="10" rx="2"/></g>
+  <g fill="#fff" opacity=".3"><path d="M22 116h10v56H22zM132 100h10v72h-10zM80 146h8v30h-8z"/></g>
+</svg>

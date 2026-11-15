@@ -5,9 +5,12 @@
     det.detect_all(frame) -> list[Detection]    # raw model output incl. "person" (for giants, T43)
     detect(frame)                               # module-level, uses a lazily created default Detector
 
-Uses an Ultralytics YOLO model: `vision/models/<MODEL>.pt` (downloaded by Ultralytics on first use), or an
-exported `<MODEL>.engine` / `.onnx` there if one exists. It runs on the laptop (CPU, Apple MPS or CUDA). `filter_detections` is a pure function so the
-filtering rules can be tested without a model.
+Uses an Ultralytics YOLO segmentation model: `vision/models/<MODEL>.pt` (downloaded by Ultralytics on first
+use), or an export of it there if one exists: `<MODEL>.engine`, `<MODEL>_openvino_model/` (the fast choice on
+Intel laptops, see docs/local-renderer.md) or `<MODEL>.onnx`. It runs on the laptop (CPU, Intel GPU via OpenVINO,
+Apple MPS or CUDA). With a segmentation model each detection also carries `extra["outline"]`: up to
+`OUTLINE_POINTS` [x, y] pixel points around the object, which the eye page's local renderer uses to cover it.
+`filter_detections` and `resample_outline` are pure functions so they can be tested without a model.
 """
 from __future__ import annotations
 
@@ -21,11 +24,12 @@ import numpy as np
 log = logging.getLogger("detector")
 
 MODELS_DIR = Path(__file__).resolve().parent / "models"
-MODEL_NAME = "yolo11n"
+MODEL_NAME = "yolo11n-seg"
 IMGSZ = 640
 CONF_THRESHOLD = 0.35
 MIN_BOX_PX = 10          # boxes smaller than this on either side are noise
 MAX_BOX_FRACTION = 0.9   # close up an object can fill most of the view; a box over all of it is the table
+OUTLINE_POINTS = 24      # enough to follow a mug handle, small enough for 10 Hz messages
 
 # COCO classes that are plausible on a table and useful as world objects.
 USEFUL_CLASSES = frozenset({
@@ -68,13 +72,33 @@ def filter_detections(raw: Iterable[Detection], frame_shape: Sequence[int] | Non
     return out
 
 
-def default_model_path(name: str = MODEL_NAME) -> str:
-    for ext in ("engine", "onnx"):
-        exported = MODELS_DIR / f"{name}.{ext}"
+def resample_outline(points, n: int = OUTLINE_POINTS) -> list[list[float]]:
+    """A mask contour (k x 2 pixel points) -> at most `n` points evenly spaced along it, rounded to 0.1 px."""
+    if points is None or len(points) < 3:
+        return []
+    pts = np.asarray(points, dtype=float).reshape(-1, 2)
+    if len(pts) > n:
+        closed = np.vstack([pts, pts[:1]])
+        dist = np.concatenate([[0.0], np.cumsum(np.linalg.norm(np.diff(closed, axis=0), axis=1))])
+        if dist[-1] <= 0:
+            return []
+        targets = np.linspace(0.0, dist[-1], n, endpoint=False)
+        pts = np.column_stack([np.interp(targets, dist, closed[:, 0]), np.interp(targets, dist, closed[:, 1])])
+    return [[round(float(x), 1), round(float(y), 1)] for x, y in pts]
+
+
+def model_task(path: str) -> str:
+    """Ultralytics task for a model path: segmentation models have "-seg" in their name."""
+    return "segment" if "-seg" in Path(path).name else "detect"
+
+
+def default_model_path(name: str = MODEL_NAME, models_dir: Path = MODELS_DIR) -> str:
+    for exported in (models_dir / f"{name}.engine", models_dir / f"{name}_openvino_model",
+                     models_dir / f"{name}.onnx"):
         if exported.exists():
             return str(exported)
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    return str(MODELS_DIR / f"{name}.pt")  # Ultralytics downloads it here on first use
+    models_dir.mkdir(parents=True, exist_ok=True)
+    return str(models_dir / f"{name}.pt")  # Ultralytics downloads it here on first use
 
 
 class Detector:
@@ -92,7 +116,7 @@ class Detector:
             from ultralytics import YOLO  # heavy import, only when actually detecting
 
             log.info("loading detector %s", self.model_path)
-            self._model = YOLO(self.model_path, task="detect")
+            self._model = YOLO(self.model_path, task=model_task(self.model_path))
         return self._model
 
     def detect_all(self, frame: np.ndarray) -> list[Detection]:
@@ -111,7 +135,16 @@ class Detector:
         xyxy = boxes.xyxy.cpu().numpy()
         confs = boxes.conf.cpu().numpy()
         clss = boxes.cls.cpu().numpy().astype(int)
-        return [Detection([float(v) for v in b], names[c], float(p)) for b, p, c in zip(xyxy, confs, clss)]
+        masks = getattr(result, "masks", None)
+        outlines = list(masks.xy) if masks is not None else []
+        out = []
+        for i, (b, p, c) in enumerate(zip(xyxy, confs, clss)):
+            extra = {}
+            outline = resample_outline(outlines[i]) if i < len(outlines) else []
+            if outline:
+                extra["outline"] = outline
+            out.append(Detection([float(v) for v in b], names[c], float(p), extra))
+        return out
 
     def detect(self, frame: np.ndarray, raw: list[Detection] | None = None) -> list[Detection]:
         """Useful objects. Pass `raw` (from detect_all) to avoid running the model twice."""

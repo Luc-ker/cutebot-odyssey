@@ -37,11 +37,12 @@ function fakes({ ready = 4, vw = 1280, vh = 720 } = {}) {
 
 test("publishes camera.frame with a small JPEG at the configured rate", () => {
   const f = fakes();
-  const sender = startFrameSender(f.hub, f.video, f.opts);
+  const sender = startFrameSender(f.hub, f.video, { ...f.opts, now: () => 1234.56 });
   f.tick();
   f.tick();
   assert.equal(sender.sent(), 2);
-  assert.deepEqual(f.published[0], { topic: TOPIC, data: { jpeg: "ZnJhbWU=", w: 640, h: 360 } });
+  // t: this page's clock, echoed back by vision as client_ts so the local renderer knows the state's age
+  assert.deepEqual(f.published[0], { topic: TOPIC, data: { jpeg: "ZnJhbWU=", w: 640, h: 360, t: 1234.6 } });
   assert.equal(f.canvas.width, 640);
   assert.deepEqual(f.draws[0].slice(1), [0, 0, 640, 360]);
   sender.stop();

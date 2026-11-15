@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 200" width="230" height="200">
+  <defs>
+    <linearGradient id="hull" x1="0" x2="1"><stop offset="0" stop-color="#9a6234"/><stop offset="1" stop-color="#4b2a12"/></linearGradient>
+    <linearGradient id="sail" x1="0" x2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#cfc2a6"/></linearGradient>
+  </defs>
+  <g stroke="#24150a" stroke-width="2.5" stroke-linejoin="round">
+    <ellipse cx="115" cy="188" rx="110" ry="10" fill="#2d6f9e"/>
+    <path d="M112 150V20M70 150V60" fill="none"/>
+    <path d="M116 26c40 10 52 50 46 104H116z" fill="url(#sail)"/>
+    <path d="M74 64c26 8 32 34 28 70H74z" fill="url(#sail)"/>
+    <path d="M112 20l24 8-24 8z" fill="#c8342b"/>
+    <path d="M14 140h204l-26 46H42z" fill="url(#hull)"/>
+    <path d="M14 140l-6-16 30 16z" fill="url(#hull)"/>
+  </g>
+  <g fill="#f3d78a" stroke="#24150a" stroke-width="1.5"><circle cx="70" cy="160" r="5"/><circle cx="110" cy="160" r="5"/><circle cx="150" cy="160" r="5"/></g>
+  <path d="M30 188c20-6 40 6 60 0s40 6 60 0 40 6 60 0" stroke="#d8f0ff" stroke-width="3" fill="none" opacity=".8"/>
+</svg>

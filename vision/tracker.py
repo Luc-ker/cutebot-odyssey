@@ -98,6 +98,7 @@ class _State:
         self.last_seen = ts
         self.last_ts = ts
         self.hits = 1
+        self.extra = dict(getattr(det, "extra", None) or {})
 
     @property
     def cls(self) -> str:
@@ -120,6 +121,7 @@ class _State:
         self.conf = det.conf
         self.last_seen = ts
         self.hits += 1
+        self.extra = dict(getattr(det, "extra", None) or {})  # this frame's outline, never a stale one
 
 
 class Tracker:
@@ -176,5 +178,5 @@ class Tracker:
             seen.append(t)
 
         self._tracks = [t for t in self._tracks if ts - t.last_seen <= self.max_lost_s]
-        return [Track(t.id, t.cls, t.bbox, t.conf) for t in sorted(seen, key=lambda s: s.id)
+        return [Track(t.id, t.cls, t.bbox, t.conf, dict(t.extra)) for t in sorted(seen, key=lambda s: s.id)
                 if t.hits >= self.min_hits]

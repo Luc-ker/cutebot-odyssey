@@ -3,7 +3,11 @@
 // Status: {ok, fps, latency_ms}. ok:false when no output frame has arrived for 1.5 s.
 //
 // Switching provider is this one line (or set RESTYLE_PROVIDER in config):
-export const PROVIDER = "fake"; // "fake" | "decart"
+export const PROVIDER = "local"; // "local" | "fake" | "decart"
+//
+// "local" (compositor.js, docs/local-renderer.md) draws the world's miniatures over the real objects on
+// this laptop. "decart" sends the camera to Decart's model; with DECART_INPUT "composited" it sends the
+// local renderer's output instead, so Decart only polishes a scene that is already right.
 //
 // The permanent provider key stays on the hub; the browser requests short-lived tokens.
 
@@ -137,6 +141,79 @@ function watchFrames(stream, onFrame) {
   return () => { on = false; v.srcObject = null; };
 }
 
+// ---------------------------------------------------------------------------------------------
+// Local provider: the compositor draws sprites over tracked objects (needs deps.hub for vision.state).
+
+async function makeCompositor(deps) {
+  const { createCompositor } = await (deps.loadCompositor?.() ?? import("./compositor.js"));
+  return createCompositor(globalThis.document, deps.compositorOptions ?? {});
+}
+
+/** Feed a compositor from the hub: objects, their roles and the world's look. Returns an unsubscribe. */
+export async function connectCompositor(compositor, hub, { now = () => performance.now(), lockedLook = null } = {}) {
+  if (!hub?.sub) return () => {};
+  const { lookForWorld } = await import("./looks.js");
+  const offs = [
+    hub.sub("vision.state", (env) => compositor.scene.onVision(env.data, now())),
+    hub.sub("world.objects", (env) => compositor.scene.onObjects(env.data, now())),
+    hub.sub("system.reset", () => compositor.scene.reset()),
+  ];
+  if (!lockedLook) {
+    offs.push(hub.sub("world.current", (env) => {
+      if (!env.data?.world) return;
+      compositor.worldLook = true; // from now on the world, not the prompt, sets the look
+      compositor.setLook(lookForWorld(env.data.world));
+    }));
+  }
+  return () => offs.forEach((off) => off?.());
+}
+
+function localProvider(config, deps, emitFrame) {
+  let compositor = null, pending = null, hooked = false, offFrame = null, prompt = "";
+  const ready = () => (pending ??= makeCompositor(deps).then((c) => (compositor = c)));
+  const applyPrompt = async () => {
+    if (compositor && prompt && (stablePrompt(config) || !compositor.worldLook)) compositor.setLook((await import("./looks.js")).lookForPrompt(prompt));
+  };
+  return {
+    name: "local",
+    async start(stream) {
+      const c = await ready();
+      if (!hooked) {
+        hooked = true;
+        // Stable Kingdom mode keeps one look; otherwise each world.current sets its own.
+        await connectCompositor(c, deps.hub, { lockedLook: stablePrompt(config) });
+      }
+      await applyPrompt();
+      offFrame?.();
+      offFrame = c.onFrame(() => emitFrame(0));
+      return c.start(stream);
+    },
+    setPrompt(text) {
+      prompt = text;
+      applyPrompt().catch(() => {});
+    },
+    stop() {
+      offFrame?.(); offFrame = null;
+      compositor?.stop();
+    },
+    get compositor() { return compositor; },
+  };
+}
+
+/** A Decart input surface that is the local renderer's output (DECART_INPUT "composited"). */
+function compositedSurface(deps) {
+  let c = null, offFrame = null;
+  return () => ({
+    async start(stream, onFrame) {
+      c ??= await makeCompositor(deps);
+      await connectCompositor(c, deps.hub, {});
+      offFrame = c.onFrame(onFrame);
+      return c.start(stream);
+    },
+    stop() { offFrame?.(); c?.stop(); },
+  });
+}
+
 function decartProvider(config, deps, emitFrame) {
   let session = null, prompt = "";
   const cleanup = (own) => {
@@ -159,7 +236,9 @@ function decartProvider(config, deps, emitFrame) {
         if (!active(own)) throw new Error("Renderer stopped");
         const model = models.realtime(config.DECART_MODEL ?? DECART_MODEL);
         const fps = typeof model.fps === "number" ? model.fps : model.fps?.ideal ?? model.fps?.max ?? 30;
-        own.surface = (deps.makeDecartSurface ?? canvasSurface)({ width: model.width, height: model.height, fps, neutral: true });
+        const makeInput = deps.makeDecartSurface
+          ?? (config.DECART_INPUT === "composited" ? compositedSurface(deps) : canvasSurface);
+        own.surface = makeInput({ width: model.width, height: model.height, fps, neutral: true });
         const input = await own.surface.start(stream, () => {}, () => ({ rgb: [0, 0, 0], strength: 0, dark: false }));
         if (!active(own)) throw new Error("Renderer stopped");
         const decart = createDecartClient({
@@ -206,7 +285,7 @@ function decartProvider(config, deps, emitFrame) {
   };
 }
 
-export const PROVIDERS = { fake: fakeProvider, decart: decartProvider };
+export const PROVIDERS = { local: localProvider, fake: fakeProvider, decart: decartProvider };
 
 /** Pure: the locked Kingdom prompt when stable mode is on (C10 STABLE_KINGDOM_*), else null. */
 export function stablePrompt(config = {}) {
@@ -219,7 +298,8 @@ export function stablePrompt(config = {}) {
 
 /**
  * @param {object} config  shared config (C10); RESTYLE_PROVIDER overrides PROVIDER
- * @param {object} [deps]  test seams: now, setInterval, clearInterval, makeSurface, loadDecartSdk, makeDecartSurface
+ * @param {object} [deps]  hub (for the local renderer); test seams: now, setInterval, clearInterval,
+ *                         makeSurface, loadDecartSdk, makeDecartSurface, loadCompositor
  */
 export function createRestyler(config = {}, deps = {}) {
   const now = deps.now ?? (() => performance.now());

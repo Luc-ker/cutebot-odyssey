@@ -11,7 +11,9 @@ def renderer_config():
     from server.world import stable
 
     config = load_config()
-    return {"RESTYLE_PROVIDER": os.environ.get("GENRATOR_RESTYLE_PROVIDER", "fake"),
+    return {"RESTYLE_PROVIDER": os.environ.get("GENRATOR_RESTYLE_PROVIDER", "local"),
+            # "composited": Decart restyles the local renderer's output instead of the raw camera.
+            "DECART_INPUT": os.environ.get("GENRATOR_DECART_INPUT", "camera"),
             "DECART_MODEL": os.environ.get("GENRATOR_DECART_MODEL", "lucy-restyle-2"),
             # Effective (env-overridden) stable mode, so the eye page agrees with the brain.
             "STABLE_KINGDOM_ENABLED": stable.enabled(config),

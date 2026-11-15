@@ -29,7 +29,36 @@ function rig() {
   };
 }
 
-test("default provider is the fake one", () => assert.equal(PROVIDER, "fake"));
+test("default provider is the local renderer", () => assert.equal(PROVIDER, "local"));
+
+test("local provider draws through the compositor and reports its frames", async () => {
+  let frameCb = null;
+  const looks = [];
+  const out = { id: "composited" };
+  const subs = [];
+  const compositor = {
+    scene: { onVision() {}, onObjects() {}, reset() {} },
+    onFrame(cb) { frameCb = cb; return () => { frameCb = null; }; },
+    async start() { return out; },
+    stop() {},
+    setLook(l) { looks.push(l); },
+  };
+  let t = 0, tick = null;
+  const r = createRestyler({ RESTYLE_PROVIDER: "local", STABLE_KINGDOM_ENABLED: true, STABLE_KINGDOM_PROMPT: "a kingdom" }, {
+    now: () => t, setInterval: (fn) => { tick = fn; return 1; }, clearInterval: () => {},
+    hub: { sub: (topic) => { subs.push(topic); return () => {}; } },
+    loadCompositor: async () => ({ createCompositor: () => compositor }),
+  });
+  r.setPrompt("a kingdom");
+  assert.equal(await r.start({}), out);
+  assert.deepEqual(subs.sort(), ["system.reset", "vision.state", "world.objects"]); // stable: no world looks
+  assert.ok(looks.length >= 1 && looks.at(-1).tintAmount > 0);
+  frameCb();
+  assert.equal(r.status.ok, true);
+  t = 2000; tick();
+  assert.equal(r.status.ok, false); // no frames for 1.5 s
+  assert.equal(r.provider.compositor, compositor);
+});
 
 test("tintForPrompt maps keywords to colours", () => {
   const lava = tintForPrompt("a volcanic wasteland, rivers of lava");
@@ -80,7 +109,7 @@ test("never any frame -> ok:false after the 1.5 s grace", async () => {
 
 test("start failure reports ok:false and rethrows", async () => {
   const statuses = [];
-  const r = createRestyler({}, {
+  const r = createRestyler({ RESTYLE_PROVIDER: "fake" }, {
     setInterval: () => 1, clearInterval: () => {},
     makeSurface: () => ({ start: async () => { throw new Error("boom"); }, stop() {} }),
   });

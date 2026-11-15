@@ -74,7 +74,7 @@ class Pipeline:
         self._reset_requested = False
         log.info("vision state reset")
 
-    def process(self, frame, ts: float) -> dict:
+    def process(self, frame, ts: float, client_ts: float | None = None) -> dict:
         if self._reset_requested:
             self._reset()
         raw = self.detector.detect_all(frame)
@@ -85,7 +85,7 @@ class Pipeline:
         giants = self.giants.detect(frame, persons) if self.giants else []
         giants = self.giant_ids.assign(giants, ts)
 
-        state = build_state(tracks, giants, frame.shape, ts)
+        state = build_state(tracks, giants, frame.shape, ts, client_ts)
         with self.lock:
             self.privacy_boxes = [g["bbox"] for g in giants] + [p.bbox for p in persons]
             self.state = state
@@ -154,7 +154,7 @@ async def amain(args) -> None:
                                                 "detail": "no camera frames (is the eye page open and the "
                                                           "phone streaming?)"})
                 continue
-            state = await asyncio.to_thread(pipeline.process, frame, ts)
+            state = await asyncio.to_thread(pipeline.process, frame, ts, getattr(source, "read_client_ts", None))
             fps_frames += 1
             now = time.monotonic()
             if now - fps_t0 >= 1.0:
@@ -182,7 +182,8 @@ def main() -> None:
     p.add_argument("--camera", default=None, help="read a camera on this machine (index or device path) "
                                                   "instead of the phone's frames")
     p.add_argument("--file", help="read frames from a video file instead of the phone")
-    p.add_argument("--model", default=None, help="YOLO model path (default vision/models/yolo11n.pt)")
+    p.add_argument("--model", default=None, help="YOLO model path (default vision/models/yolo11n-seg.pt, "
+                                                  "or its OpenVINO export there if present)")
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--no-giants", action="store_true")
     p.add_argument("--no-snapshot", action="store_true")

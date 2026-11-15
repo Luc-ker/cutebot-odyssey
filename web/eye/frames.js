@@ -1,7 +1,9 @@
 // Frame sender (whitepaper §7.3): the eye page shares the phone's raw camera feed with the vision service.
 // A few times a second the raw stream is drawn into a small canvas, encoded as JPEG and published on
-// `camera.frame` {jpeg (base64, no data: prefix), w, h} (C3). The vision service (python -m vision) turns
-// those frames into `vision.state`: the objects and giants the robot can see.
+// `camera.frame` {jpeg (base64, no data: prefix), w, h, t} (C3). The vision service (python -m vision) turns
+// those frames into `vision.state`: the objects and giants the robot can see. `t` is this page's clock
+// (performance.now) when the frame was grabbed; vision echoes it as `client_ts` so the local renderer
+// knows exactly how old each state is.
 //
 // Frames only exist in memory and on the hub socket; nothing is stored. The hub only delivers
 // `camera.frame` to clients that ask for it by name, so other pages never receive them.
@@ -29,7 +31,7 @@ export function stripDataUrl(url) {
  * Start publishing frames from `video` (an element playing the raw stream).
  * @param {{pub: Function}} hub
  * @param {HTMLVideoElement} video
- * @param {object} [o]  hz, width, quality; test seams: canvas, setInterval, clearInterval
+ * @param {object} [o]  hz, width, quality; test seams: canvas, setInterval, clearInterval, now
  * @returns {{stop(): void, sent(): number}}
  */
 export function startFrameSender(hub, video, o = {}) {
@@ -39,6 +41,7 @@ export function startFrameSender(hub, video, o = {}) {
   const canvas = o.canvas ?? video.ownerDocument.createElement("canvas");
   const setI = o.setInterval ?? globalThis.setInterval.bind(globalThis);
   const clearI = o.clearInterval ?? globalThis.clearInterval.bind(globalThis);
+  const now = o.now ?? (() => performance.now());
   const ctx = canvas.getContext("2d");
   let count = 0;
 
@@ -52,10 +55,11 @@ export function startFrameSender(hub, video, o = {}) {
       canvas.height = h;
     }
     try {
+      const t = Math.round(now() * 10) / 10;
       ctx.drawImage(video, 0, 0, w, h);
       const jpeg = stripDataUrl(canvas.toDataURL("image/jpeg", quality));
       if (!jpeg) return;
-      hub.pub(TOPIC, { jpeg, w, h });
+      hub.pub(TOPIC, { jpeg, w, h, t });
       count++;
     } catch (e) {
       console.warn("[frames] could not grab a frame:", e.message);

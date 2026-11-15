@@ -51,3 +51,27 @@ def test_finds_known_items_in_sample_image():
     frame = cv2.imread(str(SAMPLE))
     found = {x.cls for x in Detector().detect(frame)}
     assert {"cup", "bottle"} <= found, found
+
+
+# ---------------------------------------------------------------- outlines for the local renderer
+
+from vision.detector import OUTLINE_POINTS, default_model_path, model_task, resample_outline  # noqa: E402
+
+
+def test_resample_outline_keeps_short_contours_and_thins_long_ones():
+    square = [[0, 0], [10, 0], [10, 10], [0, 10]]
+    assert resample_outline(square) == [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]]
+    circle = [[100 + 50 * np.cos(a), 100 + 50 * np.sin(a)] for a in np.linspace(0, 2 * np.pi, 400, endpoint=False)]
+    out = resample_outline(circle)
+    assert len(out) == OUTLINE_POINTS
+    assert all(abs(np.hypot(x - 100, y - 100) - 50) < 1 for x, y in out)  # still on the circle
+    assert resample_outline([[0, 0], [1, 1]]) == [] and resample_outline(None) == []
+
+
+def test_model_task_and_openvino_export_preferred(tmp_path):
+    assert model_task("vision/models/yolo11n-seg.pt") == "segment"
+    assert model_task("vision/models/yolo11n-seg_openvino_model") == "segment"
+    assert model_task("vision/models/yolo11n.pt") == "detect"
+    assert default_model_path("yolo11n-seg", tmp_path).endswith("yolo11n-seg.pt")
+    (tmp_path / "yolo11n-seg_openvino_model").mkdir()
+    assert default_model_path("yolo11n-seg", tmp_path).endswith("yolo11n-seg_openvino_model")
