@@ -15,10 +15,15 @@ When stable mode is on:
 from __future__ import annotations
 
 DEFAULT_PROMPT = (
-    "Restyle the whole scene into a sunlit miniature medieval kingdom seen by a tiny explorer at ground level, "
-    "and replace bottles with tall stone watchtowers and laptops with castle fortress walls. "
-    "The output will show one continuous painterly fantasy landscape: the desk is a green meadow, "
-    "the dark space under the desk is a vast cave, and a gigantic castle rises in the far distance."
+    "Transform the real scene into a sunlit miniature medieval kingdom filmed by a handheld "
+    "camera walking through it at ground level, and permanently replace every bottle with a tall "
+    "stone watchtower and every laptop with castle fortress walls, each built exactly where the "
+    "real object stands with the same position, size and outline. The output will show one solid, "
+    "physically real 3D world with true depth and parallax: the desk is a green meadow, the dark "
+    "space under the desk is a vast cave, a gigantic castle rises in the far distance, and every "
+    "building stays fixed in place and fully transformed, never reverting to the original object, "
+    "as the camera moves, turns and walks closer. Consistent lighting, textures and style in "
+    "every frame."
 )
 DEFAULT_SETTLE_S = 1.0
 MAX_CHARS = 750  # Decart Lucy 2.6 prompt guidance: up to ~750 characters
