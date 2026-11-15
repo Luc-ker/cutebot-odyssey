@@ -17,9 +17,9 @@ STABLE = {"STABLE_KINGDOM_ENABLED": True, "STABLE_KINGDOM_PROMPT": "a miniature 
           "OBJECT_SETTLE_S": 1.0, "VIEW_GRACE_S": 0.3, "OBJECT_FORGET_S": 5}
 
 
-def test_shipped_config_turns_stable_mode_on_with_a_miniature_kingdom_prompt():
+def test_shipped_config_runs_the_music_demo_and_keeps_a_kingdom_stable_prompt():
     cfg = load_config(env={})
-    assert stable.enabled(cfg)
+    assert not stable.enabled(cfg)  # the demo is music-driven; stable mode is opt-in
     text = stable.prompt(cfg)
     assert len(text) <= 750
     for phrase in ("fairy-tale", "kingdom", "watchtower", "fortress walls", "cave", "castle",
