@@ -13,14 +13,15 @@ export const HEAR_AFTER_MS = 600;      // continuous music before "Song picked u
 export const QUIET_AFTER_MS = 1500;    // continuous silence before it goes away
 const FEATURES_STALE_MS = 2000;        // no audio.features at all (mic or brain down): stop showing it
 const COMPOSING_MAX_MS = 45000;        // a lost result never leaves "rendering" up forever
-const OUTCOME_MS = { done: 4000, kept: 2500, failed: 2500 };
+const OUTCOME_MS = { done: 4000, kept: 2500, failed: 2500, quiet: 2500 };
 
 /** Pure: the music line's text and look for a state, or null to hide it. Exported for tests. */
 export function musicLine({ hearing = false, composing = false, outcome = null } = {}) {
   if (composing) return { text: "rendering new scene", cls: "composing" };
   if (outcome?.state === "done") return { text: outcome.name || "new scene", cls: "done" };
   if (outcome?.state === "kept") return { text: "same mood · scene kept", cls: "kept" };
-  if (outcome?.state === "failed") return { text: "couldn't render · retrying", cls: "failed" };
+  if (outcome?.state === "failed") return { text: "couldn't render · scene kept", cls: "failed" };
+  if (outcome?.state === "quiet") return { text: "no song heard", cls: "failed" };
   if (hearing) return { text: "song picked up", cls: "hearing" };
   return null;
 }

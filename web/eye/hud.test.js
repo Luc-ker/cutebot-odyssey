@@ -172,8 +172,12 @@ test("kept and failed outcomes show briefly; a lost result stops 'rendering' and
   tick(2600);
   assert.equal(music.classList.contains("visible"), false);
   hub.emit("world.composing", { state: "failed" });
-  assert.match(music.textContent, /retrying/);
+  assert.match(music.textContent, /couldn't render/);
   tick(2600);
+  hub.emit("world.composing", { state: "quiet" }); // a listen press that heard no music
+  assert.equal(music.textContent, "no song heard");
+  tick(2600);
+  assert.equal(music.classList.contains("visible"), false);
   hub.emit("world.composing", { state: "composing" });
   tick(46000);
   assert.equal(music.classList.contains("visible"), false);

@@ -57,7 +57,10 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
 /* A stopped show: the plain camera, dimmed and quiet; no fallback overlay, no music line. */
 .stage[data-show="stopped"] video { filter: brightness(.5) saturate(.55); transition: filter 1.2s ease; }
 .stage[data-show="stopped"] #slot-fallback { display: none; }
-.stage[data-listening="off"] .hud-music { opacity: 0 !important; }
+/* "song picked up" only while a listen press is listening; the outcome (new scene, no song heard)
+   stays up after listening switches itself off. */
+.stage[data-show="stopped"] .hud-music,
+.stage[data-listening="off"] .hud-music.hearing { opacity: 0 !important; }
 
 @media (prefers-reduced-motion: reduce) {
   #waiting { animation: none; }

@@ -245,62 +245,6 @@ def test_song_change_always_renders_a_new_scene_even_when_the_music_looks_simila
     assert _composing(hub)[-1] == {"state": "done", "name": "Ember Forge"}
 
 
-def test_tick_waits_for_a_new_song_to_fill_the_clip_before_asking():
-    async def compose(*_args):
-        return world("Ember Forge", "volcanic forge")
-
-    hub, scheduler = build_scheduler(compose)
-    t = [100.0]
-    scheduler.clock = lambda: t[0]
-    seen = []
-    original = scheduler.request_world
-
-    async def spy(now=None, *, song_change=False):
-        seen.append((now, song_change))
-        return await original(now, song_change=song_change)
-    scheduler.request_world = spy
-
-    async def scenario():
-        await scheduler.start()
-        scheduler.silent = False
-        scheduler.last_call = 90.0
-        scheduler.mark_changed()            # new song at t=100
-        for now in (101.0, 103.0, 104.9):
-            await scheduler.tick(now)
-        assert seen == []                   # clip still mostly the old song
-        await scheduler.tick(105.0)
-        assert seen == [(105.0, True)]
-    asyncio.run(scenario())
-
-
-def test_show_controls_pause_music_driven_changes_and_report_state():
-    calls = []
-
-    async def compose(*_args):
-        calls.append(1)
-        return world("Ember Forge", "volcanic forge")
-
-    hub, scheduler = build_scheduler(compose)
-
-    async def scenario():
-        await scheduler.start()
-        scheduler.silent = False
-        await scheduler.set_show({"listening": False})
-        scheduler.mark_changed()
-        await scheduler.tick(100.0)
-        assert calls == [] and scheduler.change_pending is False
-        await scheduler.set_show({"listening": True, "running": False})
-        await scheduler.tick(200.0)
-        assert calls == []
-        await scheduler.set_show({"running": True})
-        await scheduler.tick(300.0)
-        assert calls == [1]
-    asyncio.run(scenario())
-    states = [d for t, d in hub.messages if t == "show.state"]
-    assert states[0] == {"running": True, "listening": False, "can_listen": True}
-    assert states[-1]["running"] is True and states[-1]["listening"] is True
-
-
 def test_listening_is_never_on_without_a_microphone():
     async def compose(*_args):
         return None
@@ -312,22 +256,6 @@ def test_listening_is_never_on_without_a_microphone():
         await scheduler.set_show({"listening": True})
     asyncio.run(scenario())
     assert hub.messages[-1] == ("show.state", {"running": True, "listening": False, "can_listen": False})
-
-
-def test_a_scene_that_arrives_after_listening_is_turned_off_is_dropped():
-    hub, scheduler = build_scheduler(None)
-
-    async def compose(*_args):
-        await scheduler.set_show({"listening": False})  # pressed while Gemini was working
-        return world("Ember Forge", "volcanic forge")
-    scheduler.compose = compose
-
-    async def scenario():
-        await scheduler.start()
-        scheduler.silent = False
-        assert await scheduler.request_world(now=10) is False
-        assert scheduler.current["world"]["name"] == "Kingdom"
-    asyncio.run(scenario())
 
 
 def test_gemini_repeating_the_current_setting_forces_a_built_in_scene_and_never_kept():
@@ -369,28 +297,135 @@ def test_forced_built_in_scenes_rotate_instead_of_repeating():
     assert len(set(picked)) == 4  # no repeats while three others are recent
 
 
-def test_silence_brings_back_the_kingdom_and_short_gaps_do_not():
+def _clocked(compose):
+    hub, scheduler = build_scheduler(compose)
+    t = [100.0]
+    scheduler.clock = lambda: t[0]
+    return hub, scheduler, t
+
+
+def _show_states(hub):
+    return [d for topic, d in hub.messages if topic == "show.state"]
+
+
+def test_music_alone_never_changes_the_scene_without_a_listen_press():
+    calls = []
+
     async def compose(*_args):
+        calls.append(1)
         return world("Ember Forge", "volcanic forge")
 
-    hub, scheduler = build_scheduler(compose)
-    t = [0.0]
-    scheduler.clock = lambda: t[0]
+    hub, scheduler, t = _clocked(compose)
 
     async def scenario():
         await scheduler.start()
         scheduler.on_audio_features({"silent": False})
-        assert await scheduler.request_world(now=1.0) is True
-        assert scheduler.current["world"]["name"] == "Ember Forge"
-        t[0] = 2.0
-        scheduler.on_audio_features({"silent": True})      # a gap between songs
-        await scheduler.tick(8.0)
-        assert scheduler.current["world"]["name"] == "Ember Forge"
-        await scheduler.tick(12.5)                          # 10.5 s of silence
-        assert scheduler.current["world"]["name"] == "Kingdom"
-        assert scheduler.music_for_current is None
-        await scheduler.set_show({"listening": False})      # listening off: the scene is left alone
-        scheduler.current = {**scheduler.current, "id": "w-other000"}
-        await scheduler.tick(30.0)
-        assert scheduler.current["id"] == "w-other000"
+        for now in range(100, 200, 4):
+            await scheduler.tick(float(now))
+        scheduler.on_audio_features({"silent": True})       # long silence: no return to the Kingdom either
+        await scheduler.tick(300.0)
     asyncio.run(scenario())
+    assert calls == []
+    assert scheduler.current["world"]["name"] == "Kingdom"
+
+
+def test_listen_press_hears_one_window_then_changes_the_scene_once_and_stops():
+    calls = []
+
+    async def compose(*_args):
+        calls.append(1)
+        return world("Ember Forge", "volcanic forge")
+
+    hub, scheduler, t = _clocked(compose)
+
+    async def scenario():
+        await scheduler.start()
+        await scheduler.set_show({"listening": True})       # pressed at t=100
+        assert scheduler.listening is True
+        scheduler.on_audio_features({"silent": False})
+        await scheduler.tick(103.0)
+        assert calls == []                                  # still filling the 7 s window
+        scheduler.on_audio_features({"silent": True})       # a pause right at the end doesn't cancel it
+        await scheduler.tick(107.0)
+        assert calls == [1]
+        assert scheduler.current["world"]["name"] == "Ember Forge"
+        assert scheduler.listening is False
+        scheduler.on_audio_features({"silent": False})
+        for now in range(110, 200, 4):                      # music keeps playing: no more changes
+            await scheduler.tick(float(now))
+        assert calls == [1]
+        await scheduler.set_show({"listening": True})       # the same song again still changes on a press
+        t[0] = 200.0
+        await scheduler.set_show({"listening": False})      # pressed again: cancelled
+        await scheduler.tick(210.0)
+        assert calls == [1]
+    asyncio.run(scenario())
+    assert _composing(hub)[-1] == {"state": "done", "name": "Ember Forge"}
+    assert _show_states(hub)[-1] == {"running": True, "listening": False, "can_listen": True}
+
+
+def test_listen_press_that_hears_no_music_keeps_the_scene_and_says_so():
+    calls = []
+
+    async def compose(*_args):
+        calls.append(1)
+        return world("Ember Forge", "volcanic forge")
+
+    hub, scheduler, t = _clocked(compose)
+
+    async def scenario():
+        await scheduler.start()
+        await scheduler.set_show({"listening": True})
+        scheduler.on_audio_features({"silent": True})
+        await scheduler.tick(107.0)
+    asyncio.run(scenario())
+    assert calls == []
+    assert scheduler.current["world"]["name"] == "Kingdom"
+    assert _composing(hub)[-1] == {"state": "quiet"}
+    assert scheduler.listening is False
+
+
+def test_show_state_and_stopping_the_show_cancels_listening():
+    calls = []
+
+    async def compose(*_args):
+        calls.append(1)
+        return world("Ember Forge", "volcanic forge")
+
+    hub, scheduler, t = _clocked(compose)
+
+    async def scenario():
+        await scheduler.start()
+        await scheduler.set_show({})                        # a page asking for the state
+        await scheduler.set_show({"listening": True})
+        scheduler.on_audio_features({"silent": False})
+        await scheduler.set_show({"running": False})        # stopping the show cancels the window
+        await scheduler.set_show({"listening": True})       # and listen does nothing while stopped
+        await scheduler.tick(120.0)
+        assert calls == []
+        await scheduler.set_show({"running": True})
+        await scheduler.tick(140.0)
+        assert calls == []                                  # starting the show doesn't listen by itself
+    asyncio.run(scenario())
+    states = _show_states(hub)
+    assert states[0] == {"running": True, "listening": False, "can_listen": True}
+    assert states[1]["listening"] is True
+    assert states[2] == {"running": False, "listening": False, "can_listen": True}
+    assert states[3] == {"running": False, "listening": False, "can_listen": True}
+
+
+def test_a_scene_that_arrives_after_the_listen_press_is_cancelled_is_dropped():
+    hub, scheduler, t = _clocked(None)
+
+    async def compose(*_args):
+        await scheduler.set_show({"listening": False})      # pressed again while Gemini was working
+        return world("Ember Forge", "volcanic forge")
+    scheduler.compose = compose
+
+    async def scenario():
+        await scheduler.start()
+        await scheduler.set_show({"listening": True})
+        scheduler.on_audio_features({"silent": False})
+        await scheduler.tick(107.0)
+    asyncio.run(scenario())
+    assert scheduler.current["world"]["name"] == "Kingdom"

@@ -1,6 +1,7 @@
 // Show controls on the robot's-eye page: two quiet buttons in the bottom-right corner.
 //   show   — start / stop the show: AI video plus music-driven scene changes (Space)
-//   listen — music listening on / off (M); hidden when the brain has no microphone
+//   listen — listen to the song now (M): one listening window, then one new scene for it; pressing
+//            again while it listens cancels. Hidden when the brain has no microphone
 // The brain owns the state: a press publishes `show.set`, and the buttons only change when
 // `show.state` comes back, so every open eye page agrees. The cluster rests almost invisible and
 // wakes (with the mouse pointer) while the mouse moves.
@@ -57,12 +58,12 @@ export function mountControls(container, hub, opts = {}) {
     return b;
   };
   const show = button("show", "show", "Start or stop the show · Space");
-  const listen = button("listen", "listen", "Listen to music for new scenes · M");
+  const listen = button("listen", "listen", "Listen to the song now and change the scene · M");
   root.append(show, listen);
   container.append(root);
 
   // Until the brain answers, assume the defaults it starts with.
-  let state = { running: true, listening: true, can_listen: true };
+  let state = { running: true, listening: false, can_listen: true };
   let known = false;
 
   function draw() {
@@ -94,7 +95,7 @@ export function mountControls(container, hub, opts = {}) {
 
   const off = hub.sub("show.state", (env) => {
     const d = env.data ?? {};
-    state = { running: d.running !== false, listening: d.listening !== false, can_listen: d.can_listen !== false };
+    state = { running: d.running !== false, listening: d.listening === true, can_listen: d.can_listen !== false };
     known = true;
     draw();
     opts.onState?.(state);

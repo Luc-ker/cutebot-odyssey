@@ -2,7 +2,7 @@
 // phone stream (T26) -> restyler (T28) -> full-screen video; `video.prompt` -> restyler.setPrompt.
 // The raw phone feed always plays underneath, so a failing restyler still leaves a picture.
 // Publishes `video.status {mode, latency_ms}` every second. Keys: F fullscreen, R force raw,
-// Space start/stop the show, M music listening on/off (controls.js, driven by `show.state`).
+// Space start/stop the show, M listen to the song now for one new scene (controls.js, driven by `show.state`).
 // Overlays (HUD T32, fallback T33, pulse T34) and the show controls load as optional modules. The giant
 // effect (T35: dark shadow sweep and screen shake) is no longer mounted.
 // A stopped show ends the AI video session (no renderer credits used) and dims the camera.
@@ -64,7 +64,7 @@ async function main() {
   // The renderer waits for the brain's show.state, so a page opened while the show is stopped never
   // opens an AI session. A brain that never answers (older build) counts as running after 4 s.
   let showKnown = false;
-  setTimeout(() => { if (!showKnown) onShowState({ running: true, listening: true }); }, 4000);
+  setTimeout(() => { if (!showKnown) onShowState({ running: true, listening: false }); }, 4000);
   let forcedRaw = false;
   let rendererStarted = false;
   let rendererError = null;

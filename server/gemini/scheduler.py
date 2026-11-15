@@ -11,7 +11,6 @@ import time
 import urllib.request
 from typing import Any
 
-from server.audio.change import ChangeDetector
 from server.audio.clips import ClipStore
 from server.audio.signature import distance, signature
 from server.common.config import load_config
@@ -26,10 +25,6 @@ from server.world.worlds import WorldRegistry
 
 log = logging.getLogger(__name__)
 MIN_CHANGE_INTERVAL_S = 4.0
-# After a detected song change, wait until most of the clip sent to Gemini is the new song: a clip that
-# is half the old song gets a signature (and a world) that looks like the old one.
-SONG_SETTLE_S = 5.0
-IDLE_RETURN_S = 10.0  # this long without music (show running, listening on) brings back the Kingdom
 RECENT_FALLBACKS = 3  # built-in scenes used as a forced change are not reused until 3 others have been
 CURRENT_REPUBLISH_S = 5.0
 LOOP_SLEEP_S = 0.25
@@ -59,7 +54,7 @@ async def _fetch_snapshot(config: dict) -> bytes:
 class WorldScheduler:
     """Injectable world loop; production wiring is exposed by :func:`run`."""
 
-    def __init__(self, hub, config: dict, *, audio_input=None, clip_store=None, change_detector=None,
+    def __init__(self, hub, config: dict, *, audio_input=None, clip_store=None,
                  world_registry=None, object_registry=None, role_memory=None, fallbacks=None,
                  compose=compose_world, guard=guard_world, signature_fn=signature,
                  distance_fn=distance, snapshot_fetcher=_fetch_snapshot, vocab=None, clock=time.time):
@@ -67,7 +62,6 @@ class WorldScheduler:
         self.config = config
         self.audio_input = audio_input
         self.clip_store = clip_store
-        self.change_detector = change_detector
         self.world_registry = world_registry or WorldRegistry(config)
         self.object_registry = object_registry or ObjectRegistry(config)
         self.role_memory = role_memory or RoleMemory()
@@ -84,18 +78,19 @@ class WorldScheduler:
         self.current: dict | None = None
         self.previous_id: str | None = None
         self.silent = True
-        self.silent_since: float | None = None  # when the current stretch of silence began
-        self.change_pending = False
-        self.changed_at = float("-inf")
-        # Show controls (eye page buttons, ``show.set``): a stopped show or "listen" off never changes
-        # the world from music. Listening needs a microphone, which stable mode never opens.
+        # Show controls (eye page buttons, ``show.set``). The scene never changes on its own: pressing
+        # "listen" opens one listening window (CLIP_SECONDS), then the music heard in it picks one new
+        # scene and listening switches itself off. Listening needs a microphone, which stable mode
+        # never opens.
+        self.listen_started: float | None = None  # when the current listening window opened
+        self.heard = False  # any music in the current listening window
         self.recent_fallbacks: collections.deque[str] = collections.deque(maxlen=RECENT_FALLBACKS)
         # The music that produced the current scene (None at start or after a manual select): a timed
         # check holds the scene while the music stays close to it.
         self.music_for_current: dict | None = None
         self.running = True
         self.can_listen = audio_input is not None
-        self.listening = self.can_listen
+        self.listening = False
         self.in_flight = False
         self.last_call = float("-inf")
         self.last_publish = float("-inf")
@@ -114,12 +109,9 @@ class WorldScheduler:
         await self._adopt(fallback, returning=False)
 
     def on_audio_features(self, data: dict) -> None:
-        silent = bool(data.get("silent", False))
-        if silent and not self.silent:
-            self.silent_since = self.clock()
-        elif not silent:
-            self.silent_since = None
-        self.silent = silent
+        self.silent = bool(data.get("silent", False))
+        if self.listen_started is not None and not self.silent:
+            self.heard = True
 
     def on_vision_state(self, data: dict, now: float | None = None) -> None:
         self.object_registry.update(data, self.clock() if now is None else now)
@@ -128,19 +120,30 @@ class WorldScheduler:
         return {"running": self.running, "listening": self.listening, "can_listen": self.can_listen}
 
     async def set_show(self, data: dict) -> None:
-        """``show.set {running?, listening?}`` from an eye page button; answers with ``show.state``."""
+        """``show.set {running?, listening?}`` from an eye page button; answers with ``show.state``.
+
+        ``listening: true`` opens one listening window (ignored while one is open, the show is stopped
+        or there is no microphone); ``listening: false`` cancels it, and so does stopping the show."""
         if isinstance(data.get("running"), bool):
             self.running = data["running"]
         if isinstance(data.get("listening"), bool):
-            self.listening = data["listening"] and self.can_listen
-        if not (self.running and self.listening):
-            self.change_pending = False  # a song heard while paused is not a reason to change later
+            if data["listening"] and self.running and self.can_listen and not self.listening:
+                self.listening = True
+                self.listen_started = self.clock()
+                self.heard = False
+            elif not data["listening"]:
+                self._stop_listening()
+        if not self.running:
+            self._stop_listening()
         await self.hub.pub("show.state", self.show_state())
 
-    def mark_changed(self) -> None:
-        """The change detector heard a new song: compose a new world for it once it has settled."""
-        self.change_pending = True
-        self.changed_at = self.clock()
+    def _stop_listening(self) -> None:
+        self.listening = False
+        self.listen_started = None
+        self.heard = False
+
+    def listen_seconds(self) -> float:
+        return float(self.config.get("CLIP_SECONDS", 7.0))
 
     async def tick(self, now: float | None = None) -> None:
         now = self.clock() if now is None else now
@@ -148,21 +151,21 @@ class WorldScheduler:
             await self._publish_current()
             await self.hub.pub("show.state", self.show_state())  # pages opened mid-run catch up
             self.last_publish = now
-        if not (self.running and self.listening):
-            self.change_pending = False
+        if (not (self.running and self.listening) or self.listen_started is None or self.in_flight
+                or now - self.listen_started < self.listen_seconds()):
             return
-        if await self._return_to_kingdom_when_idle(now):
-            return
-        if self.change_pending and now - self.changed_at < SONG_SETTLE_S:
-            return  # a new song just started: let the clip fill with it before asking
-        due_interval = now - self.last_call >= float(self.config.get("GEMINI_INTERVAL_S", 8.0))
-        due_change = self.change_pending and now - self.last_call >= MIN_CHANGE_INTERVAL_S
-        if (due_interval or due_change) and not self.silent and not self.in_flight:
-            song_change = self.change_pending
-            self.change_pending = False
-            await self.request_world(now, song_change=song_change)
+        # The listening window is full: its music picks one new scene, then listening switches off.
+        self.listen_started = None
+        if self.heard:
+            await self.request_world(now, song_change=True, manual=True)
+        else:
+            log.info("listened for %.0f s but heard no music; scene unchanged", self.listen_seconds())
+            await self._publish_composing("quiet")
+        self._stop_listening()
+        await self.hub.pub("show.state", self.show_state())
 
-    async def request_world(self, now: float | None = None, *, song_change: bool = False) -> bool:
+    async def request_world(self, now: float | None = None, *, song_change: bool = False,
+                            manual: bool = False) -> bool:
         """Change the world for the music playing now.
 
         ``song_change`` is True when the change detector heard a new song. A timed check during the same
@@ -170,10 +173,12 @@ class WorldScheduler:
         close, keeps the world without calling Gemini at all. Past that point the scene always
         changes: to a world this song had before, to Gemini's new world, or, when Gemini fails or comes
         back with the current setting, to one of the 8 built-in scenes.
+
+        ``manual`` is a "listen" press: the music was already heard, so a pause right at the end of the
+        listening window or a recent change does not stop it.
         """
         now = self.clock() if now is None else now
-        if self.silent or self.in_flight or now - self.last_call < MIN_CHANGE_INTERVAL_S:
-            self.change_pending = True
+        if self.in_flight or (not manual and (self.silent or now - self.last_call < MIN_CHANGE_INTERVAL_S)):
             return False
         self.in_flight = True
         self.last_call = now
@@ -213,8 +218,8 @@ class WorldScheduler:
                 log.warning("world composition failed (%s); switching to a built-in scene", exc)
                 await self._publish_health(False, str(exc))
                 world = None
-            if not (self.running and self.listening):
-                return False  # listening was turned off (or the show stopped) while Gemini worked
+            if not self.running or (manual and not self.listening):
+                return False  # the show stopped, or the listen press was cancelled, while Gemini worked
             if world is None:
                 world = self._pick_fallback(music_signature)
                 if world is None:
@@ -232,20 +237,6 @@ class WorldScheduler:
             return False
         finally:
             self.in_flight = False
-
-    async def _return_to_kingdom_when_idle(self, now: float) -> bool:
-        """No song for IDLE_RETURN_S: the scene goes back to the Kingdom until music starts again."""
-        if (not self.silent or self.silent_since is None or self.in_flight
-                or now - self.silent_since < float(self.config.get("IDLE_RETURN_S", IDLE_RETURN_S))):
-            return False
-        kingdom = self.world_registry.get_by_name(stable.DEFAULT_WORLD)
-        if kingdom is None or (self.current or {}).get("id") == kingdom.get("id"):
-            return False
-        log.info("no music for %.0f s: back to the Kingdom", now - self.silent_since)
-        await self._adopt(kingdom, returning=False)
-        self.music_for_current = None  # the next song always changes it
-        await self._publish_composing("done", kingdom)
-        return True
 
     async def _compose_new(self, audio_wav: bytes, music_signature: dict) -> dict | None:
         """Gemini's world for this music, registered, or None when it is no change from now."""
@@ -301,18 +292,15 @@ class WorldScheduler:
 
     async def reset(self) -> None:
         self.current = None
-        self.silent_since = None
         self.music_for_current = None
+        self._stop_listening()
         self.recent_fallbacks.clear()
         self.previous_id = None
         self.last_call = float("-inf")
         self.last_publish = float("-inf")
-        self.change_pending = False
         self.silent = True
         if self.audio_input and hasattr(self.audio_input, "clear"):
             self.audio_input.clear()
-        if self.change_detector:
-            self.change_detector.reset()
 
     async def _adopt(self, world: dict, returning: bool) -> None:
         adopted = copy.deepcopy(world)
@@ -376,8 +364,7 @@ async def run(hub, config: dict | None = None) -> None:
     music_enabled = config.get("MUSIC_ENABLED", True) and not stable_kingdom
     audio = AudioInput(config) if music_enabled else None
     scheduler = WorldScheduler(hub, config, audio_input=audio,
-                               clip_store=ClipStore(audio) if audio else None,
-                               change_detector=ChangeDetector(audio.rate) if audio else None)
+                               clip_store=ClipStore(audio) if audio else None)
     await scheduler.start()
 
     async def with_data(env: dict, fn):
@@ -400,14 +387,6 @@ async def run(hub, config: dict | None = None) -> None:
     hub.sub("show.set", lambda env: scheduler.set_show(env.get("data") or {}))
     hub.sub("system.reset", on_reset)
 
-    loop = asyncio.get_running_loop()
-
-    def on_audio(samples, ts):
-        if scheduler.change_detector.update(samples, ts):
-            loop.call_soon_threadsafe(scheduler.mark_changed)
-
-    if audio:
-        audio.on_block(on_audio)
     try:
         try:
             if audio:
