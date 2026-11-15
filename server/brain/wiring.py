@@ -72,6 +72,7 @@ MODULES: list[ModuleSpec] = [
     # world loop (Gemini)
     ModuleSpec("scheduler", "server.gemini.scheduler", "gemini", params={"registry": "worlds"}),
     ModuleSpec("talk", "server.gemini.talk", "gemini", optional=True),
+    ModuleSpec("model_designer", "server.gemini.model_designer", "gemini", optional=True),
     # robot's-eye prompt
     ModuleSpec("prompt_composer", "server.world.prompt_composer", "video"),
     ModuleSpec("prompt_blend", "server.world.prompt_blend", "video"),

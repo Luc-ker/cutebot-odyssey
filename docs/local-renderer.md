@@ -1,9 +1,12 @@
 # Local renderer
 
 The robot's-eye screen turns real objects into the world's miniatures (a bottle becomes a watchtower,
-a cup a beacon) by drawing graphics over them on the laptop, at the camera's frame rate. There is no AI
-video model in the loop, so it needs no account, no credits and no network, and every object becomes
-exactly the miniature its role says, in exactly the right place, on every frame.
+a cup a beacon) by drawing **live 3D models** over them on the laptop, at the camera's frame rate.
+**Gemini designs each object's model**: a unique recipe of simple 3D parts that echoes the real
+object's shape and colour and suits the world. Until Gemini's design arrives (or with no network) a
+seeded procedural model stands in, so every object is different from the first frame. There is no AI
+video model in the loop, so the picture never waits on the network, and every object becomes exactly
+the miniature its role says, in exactly the right place, on every frame.
 
 It is the default restyle provider (`GENRATOR_RESTYLE_PROVIDER=local`). `fake` (tint only) and `decart`
 remain available; see [restyle-provider.md](restyle-provider.md).
@@ -16,14 +19,20 @@ phone camera ──WebRTC──► eye page ──camera.frame {jpeg, t}──�
                             └──── vision.state {objects: pos, size, outline; client_ts} ◄┘
                                    world.objects {id → role}  (brain, or the Kingdom class table)
 
+brain: server/gemini/model_designer.py
+  world.objects (a new role) + snapshot crop ──► Gemini ──► recipe (shared/schemas/model.schema.json)
+  ──► world.models {id → recipe}, once a second; cached in logs/model_cache.json
+
 eye page, every video frame (web/eye/compositor.js):
   camera frame
   → for each object with a role, farthest first:
        cover   outline enlarged and filled with the surrounding colour (soft-edged, low-res layer)
        shadow  soft contact shadow under it
-       sprite  the role's miniature, covering the box, standing on its bottom edge,
-               shaded towards the colour and brightness around it
+       model   a three.js 3D miniature (web/eye/models/): Gemini's recipe, or a seeded procedural
+               one until it arrives; covering the box, standing on its bottom edge, lit by the
+               frame's light, turning with its place in the view, animated (flames, flags, wings)
        decal   flat roles (river, road, bridge, glacier, ash field) fill the outline with a texture
+       sprite  only if three.js can't load: the role's flat SVG miniature
   → world particles (motes, embers, snow, bubbles, fireflies)
   → colour grade + vignette + film grain over everything (WebGL, web/eye/grade.js)
 ```
@@ -33,8 +42,13 @@ eye page, every video frame (web/eye/compositor.js):
 | `vision/detector.py` | Segmentation model; each detection carries `extra["outline"]` (24 points) |
 | `vision/state.py` | `vision.state.objects[].outline` in view units; `client_ts` echoes `camera.frame.t` |
 | `web/eye/scene.js` | Per-object prediction to the current video frame, One Euro smoothing, fade in/out |
-| `web/eye/sprites.js` | Role → sprite or decal; Kingdom class → role table for when the brain is off |
-| `web/eye/sprites/*.svg` | 16 hand-drawn miniatures, rasterised once at load |
+| `server/gemini/model_designer.py` | Asks Gemini for one model recipe per object, checks it, caches it, publishes `world.models` |
+| `shared/schemas/model.schema.json` | The recipe format, also Gemini's response schema |
+| `web/eye/models/recipe.js` | Recipe checks (same rules as the Python guard) and 16 seeded procedural generators |
+| `web/eye/models/builder.js` | Recipe → three.js model with materials and part animations |
+| `web/eye/models/stage3d.js` | The 3D scene: places, scales, turns and lights every model |
+| `web/eye/sprites.js` | Role → archetype or decal; Kingdom class → role table for when the brain is off |
+| `web/eye/sprites/*.svg` | 16 flat miniatures, used only when three.js can't load |
 | `web/eye/looks.js` | One grade and particle effect per world |
 | `web/eye/compositor.js` | The drawing |
 | `web/eye/grade.js` | The WebGL grade pass (Canvas 2D fallback) |
@@ -59,6 +73,30 @@ is held for 350 ms, then fades out over 250 ms. A newly assigned role grows in o
 - **One grade for everything:** camera and sprites go through the same colour grade and grain.
 - **Miniature art style:** painted toy-like miniatures hide small edge and lighting errors that
   photoreal sprites would expose.
+
+### Gemini-designed models
+
+`server/gemini/model_designer.py` runs in the brain's `gemini` group. When `world.objects` gives an
+object a role, it sends Gemini the world, the role (and its description from `shared/roles.json`), the
+real object's class and on-screen proportions, and a crop of the object from the vision snapshot. Gemini
+answers with a recipe: up to 32 parts (box, cylinder, cone, sphere, dome, pyramid, torus, wedge, capsule),
+each with a size, position, colour, material (stone, wood, metal, gold, cloth, leaf, scale, crystal,
+water, glow), optional rotation, optional ring or line repeats, and optional animation (flicker, flap,
+sway, spin, bob, pulse). Every answer is checked and repaired on both sides (`normalise_recipe` in Python,
+`normaliseRecipe` in JS), so a bad answer can't break the picture.
+
+- One request at a time, at most `MODEL_DESIGN_PER_MIN` (10) a minute; visible objects first.
+- Stable Kingdom mode designs one model per detector class (every bottle is the same tower), otherwise
+  one per object.
+- Designs are kept in `logs/model_cache.json` per world setting and role. Once `MODEL_VARIANTS_PER_ROLE`
+  (3) exist, new objects with that role reuse one of them, so a long demo doesn't keep paying for calls
+  and a restart starts with Gemini's models already there.
+- `MODEL_DESIGN_ENABLED: false` turns it off; the eye page then uses procedural models only.
+
+When Gemini's model for an object arrives, the stand-in shrinks away and the designed model grows in.
+Press **D** on the eye page to see how many models are on screen and how many came from Gemini.
+
+Needs `GEMINI_API_KEY` in the repository's `.env` and the `google-genai` package, as for the world composer.
 
 ## Running it
 
@@ -94,12 +132,14 @@ vision states delayed by 150 ms. Serve the repository and open it:
 python -m http.server 8137 --bind 127.0.0.1
 ```
 
-Then visit `http://127.0.0.1:8137/web/eye/preview.html`. You can switch the world look, show the
+Then visit `http://127.0.0.1:8137/web/eye/preview.html` (add `?gallery` to see one model of every
+archetype side by side). You can switch the world look, show the
 outlines and view the camera side by side. Add `?camera` to use the laptop's webcam (there's no
 detection then). Keep the page visible: background tabs are throttled to about 1 fps.
 
-Measured on this laptop (Intel Iris Xe) in the preview: 27–28 fps composited, against a 30 fps
-source. Before the blur filters were replaced it ran at 16 fps.
+Measured on this laptop (Intel Iris Xe) in the preview: 29–30 fps composited with live 3D models,
+against a 30 fps source. three.js is loaded from jsDelivr (pinned `three@0.170.0`), so the eye page
+needs the network once at start; without it the flat sprites are used.
 
 ## Decart on top (optional)
 
@@ -108,6 +148,11 @@ output to Decart instead of the raw camera, so the model only repaints a scene t
 right miniatures in the right places. That still uses Decart credits.
 
 ## Adding art
+
+New 3D archetypes: add a generator to `GEN` in `web/eye/models/recipe.js` and map roles to it in
+`ROLE_ART` in `web/eye/sprites.js`. Check it in `preview.html?gallery`.
+
+Flat fallback sprites:
 
 Add `web/eye/sprites/<key>.svg` (with `viewBox`, `width` and `height`; the bottom of the drawing is the
 ground line), add the key to `SPRITE_KEYS` and map roles to it in `ROLE_ART` in `web/eye/sprites.js`. Light

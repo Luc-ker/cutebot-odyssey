@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "genrator/model.schema.json",
+  "title": "Model recipe",
+  "description": "A miniature 3D model as a list of simple parts, designed by Gemini (server/gemini/model_designer.py) and built live in three.js by the eye page (web/eye/models/builder.js). Units: the model stands on the ground at y = 0, about 1 unit tall; x is left-right, z front-back, both centred on 0. Also used verbatim as Gemini's response schema, so it sticks to the subset Gemini accepts (no $ref, no oneOf).",
+  "type": "object",
+  "required": ["name", "parts"],
+  "properties": {
+    "name": {"type": "string", "description": "Short name of what was built, e.g. 'moss-covered watchtower'."},
+    "animation": {"type": "string", "enum": ["none", "bob", "spin", "sway", "breathe"],
+                  "description": "Whole-model idle motion. Creatures breathe or bob; buildings none or sway."},
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "required": ["shape", "size", "pos", "colour", "material"],
+        "properties": {
+          "shape": {"type": "string",
+                    "enum": ["box", "cylinder", "cone", "sphere", "dome", "pyramid", "torus", "wedge", "capsule"]},
+          "size": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"},
+                   "description": "Width, height, depth (x, y, z), each 0.02 to 1.2. For cylinder/cone/sphere/dome/capsule width is the diameter."},
+          "pos": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"},
+                  "description": "Centre of the part's base: x and z in -0.8..0.8, y (height of the part's bottom) in 0..1.4."},
+          "rot": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"},
+                  "description": "Rotation in degrees about x, y, z (-180..180), about the part's own centre. Optional."},
+          "colour": {"type": "string", "description": "#rrggbb"},
+          "material": {"type": "string",
+                       "enum": ["stone", "wood", "metal", "gold", "cloth", "leaf", "scale", "crystal", "water", "glow"]},
+          "repeat": {
+            "type": "object",
+            "description": "Optional: copies of this part. ring = evenly round the y axis at radius; line = along x with spacing.",
+            "required": ["count", "mode"],
+            "properties": {
+              "count": {"type": "integer", "description": "2..12"},
+              "mode": {"type": "string", "enum": ["ring", "line"]},
+              "radius": {"type": "number"},
+              "spacing": {"type": "number"}
+            }
+          },
+          "anim": {"type": "string", "enum": ["none", "spin", "bob", "sway", "flicker", "flap", "pulse"],
+                   "description": "Optional motion of this part alone: flicker for flames, flap for wings, spin for windmills."}
+        }
+      }
+    }
+  }
+}

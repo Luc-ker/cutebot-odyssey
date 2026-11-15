@@ -156,6 +156,7 @@ export async function connectCompositor(compositor, hub, { now = () => performan
   const offs = [
     hub.sub("vision.state", (env) => compositor.scene.onVision(env.data, now())),
     hub.sub("world.objects", (env) => compositor.scene.onObjects(env.data, now())),
+    hub.sub("world.models", (env) => compositor.onModels?.(env.data)),
     hub.sub("system.reset", () => compositor.scene.reset()),
   ];
   if (!lockedLook) {

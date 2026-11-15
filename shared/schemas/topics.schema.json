@@ -1159,6 +1159,74 @@
           "minLength": 1
         }
       }
+    },
+    "world.models": {
+      "type": "object",
+      "required": [
+        "world_id",
+        "models"
+      ],
+      "description": "Gemini-designed 3D miniatures per object (server/gemini/model_designer.py), once a second. recipe follows shared/schemas/model.schema.json.",
+      "properties": {
+        "world_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "role",
+              "source",
+              "recipe"
+            ],
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "role": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source": {
+                "enum": [
+                  "gemini"
+                ]
+              },
+              "recipe": {
+                "type": "object",
+                "required": [
+                  "parts"
+                ],
+                "properties": {
+                  "parts": {
+                    "type": "array",
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "_samples": {
@@ -1474,6 +1542,43 @@
         "src": "test",
         "data": {
           "name": "kingdom"
+        }
+      },
+      {
+        "topic": "world.models",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "world_id": "w-00000004",
+          "models": [
+            {
+              "id": 3,
+              "role": "watchtower",
+              "name": "mossy watchtower",
+              "source": "gemini",
+              "recipe": {
+                "name": "mossy watchtower",
+                "animation": "none",
+                "parts": [
+                  {
+                    "shape": "cylinder",
+                    "size": [
+                      0.4,
+                      0.7,
+                      0.4
+                    ],
+                    "pos": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "colour": "#b8a98c",
+                    "material": "stone"
+                  }
+                ]
+              }
+            }
+          ]
         }
       }
     ],

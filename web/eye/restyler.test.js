@@ -51,7 +51,7 @@ test("local provider draws through the compositor and reports its frames", async
   });
   r.setPrompt("a kingdom");
   assert.equal(await r.start({}), out);
-  assert.deepEqual(subs.sort(), ["system.reset", "vision.state", "world.objects"]); // stable: no world looks
+  assert.deepEqual(subs.sort(), ["system.reset", "vision.state", "world.models", "world.objects"]); // stable: no world looks
   assert.ok(looks.length >= 1 && looks.at(-1).tintAmount > 0);
   frameCb();
   assert.equal(r.status.ok, true);

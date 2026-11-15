@@ -8,8 +8,11 @@
 //                  low-resolution layer that is scaled up (soft edges without a blur filter, which is
 //                  slow on integrated GPUs), so the real object doesn't peek out around the sprite;
 //        shadow  - a soft contact shadow where it meets the table;
-//        sprite  - the role's miniature (sprites.js), sized to cover the object, standing on its bottom
-//                  edge, shaded towards the colour and brightness around it;
+//        model   - a live 3D miniature (models/stage3d.js, three.js): Gemini's design for this object
+//                  (`world.models`) or, until it arrives, a seeded procedural one, lit by the frame's
+//                  light and turning with its place in the view;
+//        sprite  - only if three.js can't load: the role's flat SVG miniature (sprites.js), shaded
+//                  towards the colour and brightness around it;
 //        decal   - flat roles (river, road, bridge...) fill the outline with an animated texture instead;
 //   3. world particles (motes, snow, embers...);
 //   4. the colour grade + grain over everything (grade.js), so camera and sprites share one look.
@@ -21,6 +24,9 @@ import { createScene } from "./scene.js";
 import { artFor, kingdomRoleForClass, loadSprites } from "./sprites.js";
 import { createGrade } from "./grade.js";
 import { lookForPrompt } from "./looks.js";
+
+// three.js, pinned, from the CDN the project already allows; override with opts.threeUrl.
+export const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js";
 
 export const MAX_WIDTH = 960;   // render at most this wide; the display scales up
 const COVER = 1.12;             // sprites are drawn this much larger than the object's box
@@ -200,6 +206,33 @@ export function createCompositor(doc = globalThis.document, opts = {}) {
   let video = null, output = null, running = false, handle = null, generation = 0;
   let ambientData = null, ambientAt = -Infinity, lastT = null;
   const frameListeners = new Set();
+  let stage = null, pendingModels = null, stageError = null;
+
+  /** Load three.js and make the 3D stage; on failure keep the 2D sprites. */
+  async function startStage() {
+    if (stage || stageError || opts.threeD === false) return;
+    try {
+      const THREE = opts.three ?? await Promise.race([
+        import(/* @vite-ignore */ opts.threeUrl ?? THREE_URL),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("three.js load timed out")), 8000)),
+      ]);
+      const { createStage3d } = await import("./models/stage3d.js");
+      stage = createStage3d(THREE, doc);
+      if (pendingModels) stage.setModels(pendingModels);
+    } catch (e) {
+      stageError = e.message;
+      console.warn("[compositor] 3D models unavailable, using flat sprites:", e.message);
+    }
+  }
+
+  function frameLight() {
+    if (!ambientData) return { colour: [200, 190, 170], lum: 0.5 };
+    let r = 0, g = 0, b = 0;
+    for (let i = 0; i < ambientData.length; i += 4) { r += ambientData[i]; g += ambientData[i + 1]; b += ambientData[i + 2]; }
+    const n = ambientData.length / 4;
+    const colour = [r / n, g / n, b / n];
+    return { colour, lum: luminance(colour) };
+  }
 
   function ambientAround(box, W, H) {
     if (!ambientData) return [128, 128, 128];
@@ -287,12 +320,14 @@ export function createCompositor(doc = globalThis.document, opts = {}) {
       return;
     }
 
-    const sprite = sprites?.get(art.key);
-    if (!sprite) { ctx.restore(); return; }
+    const sprite = stage ? null : sprites?.get(art.key);
+    if (!stage && !sprite) { ctx.restore(); return; }
 
     // 1. (the cover was drawn for all items by drawCovers) 2. contact shadow
     const grow = 0.85 + 0.15 * item.appear;
-    const place = spritePlacement(sprite.width, sprite.height, px);
+    const place = stage
+      ? { x: px.x1, y: px.y2 + bh * 0.04 - bh * COVER, w: bw * COVER, h: bh * COVER } // the 3D model's footprint
+      : spritePlacement(sprite.width, sprite.height, px);
     const cx = (px.x1 + px.x2) / 2, base = place.y + place.h;
     const rx = place.w * 0.5 * grow, ry = Math.max(3, place.w * 0.1);
     ctx.globalAlpha = 0.5 * alpha;
@@ -303,6 +338,7 @@ export function createCompositor(doc = globalThis.document, opts = {}) {
     ctx.fillStyle = sh;
     ctx.fillRect(-rx, -rx, rx * 2, rx * 2);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (stage) { ctx.restore(); return; } // the model itself is drawn by the 3D stage
 
     // 3. the sprite, shaded towards its surroundings
     const dw = Math.max(1, Math.round(place.w * grow)), dh = Math.max(1, Math.round(place.h * grow));
@@ -342,7 +378,9 @@ export function createCompositor(doc = globalThis.document, opts = {}) {
     }
     const lat = scene.latencyMs;
     ctx.fillStyle = "#0f0";
-    ctx.fillText(`vision age ${lat === null ? "?" : Math.round(lat) + " ms"} · grade ${grade.kind}`, 8, H - 8);
+    const st = stage?.stats();
+    const models = st ? `3D models ${st.models} (${st.gemini} by Gemini)` : `flat sprites${stageError ? ` (${stageError})` : ""}`;
+    ctx.fillText(`vision age ${lat === null ? "?" : Math.round(lat) + " ms"} · grade ${grade.kind} · ${models}`, 8, H - 8);
     ctx.restore();
   }
 
@@ -368,6 +406,10 @@ export function createCompositor(doc = globalThis.document, opts = {}) {
       const items = scene.items(t);
       drawCovers(items, W, H);
       for (const it of items) drawItem(it, W, H, t);
+      if (stage) {
+        const solid = items.filter((it) => artFor(it.role, it.behaviour).kind === "sprite");
+        ctx.drawImage(stage.render(solid, W, H, t / 1000, frameLight()), 0, 0, W, H);
+      }
       drawParticles(ctx, particles, look, W, H, dt, t);
       if (debug) drawDebug(items, W, H);
       grade.render(sceneCanvas, look, t, pulse);
@@ -393,7 +435,7 @@ export function createCompositor(doc = globalThis.document, opts = {}) {
     /** Start drawing `stream`; resolves with the composited MediaStream. */
     async start(stream, fps = 30) {
       const own = ++generation;
-      await spritesReady;
+      await Promise.all([spritesReady, startStage()]);
       video = Object.assign(doc.createElement("video"), { muted: true, playsInline: true, srcObject: stream });
       await video.play().catch(() => {});
       if (own !== generation) throw new Error("Renderer stopped");
@@ -421,6 +463,9 @@ export function createCompositor(doc = globalThis.document, opts = {}) {
     },
     get look() { return look; },
     setDebug(on) { debug = Boolean(on); },
+    /** `world.models` data: Gemini-designed recipes by object id. */
+    onModels(data) { pendingModels = data; stage?.setModels(data); },
+    get modelsKind() { return stage ? "3d" : "2d"; },
     get debug() { return debug; },
     beat(strength = 1) { pulse = Math.max(pulse, clamp(strength, 0, 1)); },
     onFrame(cb) { frameListeners.add(cb); return () => frameListeners.delete(cb); },
