@@ -12,7 +12,7 @@ def renderer_config():
 
     config = load_config()
     return {"RESTYLE_PROVIDER": os.environ.get("GENRATOR_RESTYLE_PROVIDER", "fake"),
-            "DECART_MODEL": os.environ.get("GENRATOR_DECART_MODEL", "lucy-2.6"),
+            "DECART_MODEL": os.environ.get("GENRATOR_DECART_MODEL", "lucy-restyle-2"),
             # Effective (env-overridden) stable mode, so the eye page agrees with the brain.
             "STABLE_KINGDOM_ENABLED": stable.enabled(config),
             "STABLE_KINGDOM_PROMPT": stable.prompt(config)}

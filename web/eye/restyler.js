@@ -13,8 +13,9 @@ const STATUS_EVERY_MS = 500;
 
 // Decart realtime SDK (see docs/restyle-provider.md). Pin a version once the spike settles it.
 const DECART_SDK_URL = "https://esm.sh/@decartai/sdk@0.2.14";
-// lucy-2.6 edits the scene (replaces objects); lucy-restyle-2 only changes style and keeps every shape.
-const DECART_MODEL = "lucy-2.6";
+// lucy-restyle-2 repaints the scene and keeps every shape, so the output follows the real room as the
+// camera turns and moves. lucy-2.6 can replace objects but invents its own layout (live test 2026-11-15).
+const DECART_MODEL = "lucy-restyle-2";
 
 /** Pure: Decart's prompt enhancer stays off for every model. Live lucy-2.6 tests (2026-11-15) showed
  * it expanding our prompt into extra scene items (a table with bottles and a laptop inside the castle

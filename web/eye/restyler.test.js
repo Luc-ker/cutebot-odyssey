@@ -132,7 +132,7 @@ test("Decart publishes an owned model-sized stream, refreshes tokens and cleans 
           assert.equal(await options.apiKeyProvider(), "ephemeral-1");
           assert.equal(await options.apiKeyProvider(), "ephemeral-2");
           assert.equal(settings.initialState.prompt.text, "Kingdom");
-          assert.equal(settings.initialState.prompt.enhance, false); // literal prompt, even for lucy-2.6
+          assert.equal(settings.initialState.prompt.enhance, false); // literal prompt for every model
           settings.onRemoteStream(remote);
           return rt;
         } } };

@@ -65,10 +65,14 @@ model and requesting origin, requires a same-origin custom-header request, and m
 `no-store`. The local hub is intended for a trusted LAN. The Eye status shows connection failures
 while keeping the raw camera usable. Set `GENRATOR_RESTYLE_PROVIDER=fake` for offline tint preview.
 The browser SDK is pinned to `@decartai/sdk@0.2.14`. Override the model with `GENRATOR_DECART_MODEL`;
-default `lucy-2.6` (1280×720, 30 fps), Decart's realtime editing model: it can replace objects
-(a bottle becomes a watchtower), which `lucy-restyle-2` cannot; restyle only changes the look and keeps
-every shape. Lucy 2.6 costs $0.02 per second of rendering against $0.01 for `lucy-restyle-2`
-(Decart pricing page, 2026-11); set `GENRATOR_DECART_MODEL=lucy-restyle-2` for cheaper style-only runs.
+default `lucy-restyle-2`, which repaints the scene in the prompt's style and keeps every shape, so the
+output follows the real room as the camera turns and moves forward or back. In the 2026-11-15 live test
+(phone held landscape on a hotspot) it rendered at about 29 fps. `lucy-2.6` (1280×720, 30 fps) is Decart's
+realtime editing model: it can replace objects (a bottle becomes a watchtower) but invents its own layout,
+so the view stops matching the room; it also costs $0.02 per second against $0.01 for `lucy-restyle-2`
+(Decart pricing page, 2026-11). Set `GENRATOR_DECART_MODEL=lucy-2.6` to try object replacement.
+Live video needs outbound UDP (WebRTC): networks that block it, such as eduroam, connect and then drop
+every ~15 s with no AI frames. Use a phone hotspot instead.
 Incoming phone frames are copied into an owned canvas stream at the model’s width, height and frame
 rate, scaled to cover the whole frame (overflow cropped). Letterbox bars are avoided because the model
 paints them as separate scenery with visible seams. The SDK never owns the original phone camera track.
@@ -89,7 +93,7 @@ const client = createDecartClient({
   telemetry: false,
 });
 const rt = await client.realtime.connect(phoneStream, {
-  model: models.realtime("lucy-2.6"),
+  model: models.realtime("lucy-restyle-2"),
   onRemoteStream: (styled) => { video.srcObject = styled; },
   initialState: { prompt: { text: firstPrompt, enhance: false } },  // literal prompt
 });
@@ -105,8 +109,8 @@ Notes and open questions:
   enhancer turned our prompt into extra scene items, such as a table with bottles inside the castle world. Lucy 2.6 prompts work best as a command
   sentence followed by "The output will show ...", about 40–65 words and at most ~750 characters.
 - **Keys:** the hub mints restricted short-lived client tokens; the browser uses `apiKeyProvider` to refresh credentials before connecting or reconnecting. Never place the permanent key in shared config or browser storage.
-- **Model id:** default `lucy-2.6`; override with `GENRATOR_DECART_MODEL` in the local environment
-  (for example `lucy-restyle-2`).
+- **Model id:** default `lucy-restyle-2`; override with `GENRATOR_DECART_MODEL` in the local environment
+  (for example `lucy-2.6`).
 - **Stats fields:** the adapter reads `latency.medianMs` / `medianMs` from the `stats` event as a best
   guess. Check the real payload in the spike page console and fix the field name if it differs.
 - **SDK version:** `DECART_SDK_URL` is pinned to `@decartai/sdk@0.2.14`.

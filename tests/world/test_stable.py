@@ -157,4 +157,4 @@ def test_renderer_config_exposes_effective_stable_settings(monkeypatch):
     assert cfg["STABLE_KINGDOM_ENABLED"] is True and "fairy-tale" in cfg["STABLE_KINGDOM_PROMPT"]
     assert not any("KEY" in k for k in cfg)
     monkeypatch.delenv("GENRATOR_DECART_MODEL", raising=False)
-    assert renderer_config()["DECART_MODEL"] == "lucy-2.6"
+    assert renderer_config()["DECART_MODEL"] == "lucy-restyle-2"
