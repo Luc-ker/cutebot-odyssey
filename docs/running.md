@@ -87,6 +87,16 @@ the world. The status page can still select other fallback worlds or reset to Ki
 assignment may use Gemini; local role assignment takes over if it is unavailable. Restart without
 `--no-music` when ready to test music-driven composition.
 
+**Stable Kingdom mode** (`STABLE_KINGDOM_ENABLED`, on by default for the demo) keeps the rendered scene
+steady. The renderer gets one fixed miniature-world prompt (`STABLE_KINGDOM_PROMPT`: the camera is a tiny
+explorer, a bottle is a towering building, under the desk is a cave, a gigantic castle stands in the far
+distance) and nothing else ever changes it: no per-object, giant or world-transition prompts, and
+`world.select` is ignored. A new object must stay in view for `OBJECT_SETTLE_S` (1 s) before it gets a
+role, and its role is chosen locally by detector class, so every bottle is the same watchtower and no
+Gemini role call is made. Hands and people over the table no longer trigger giant events. The microphone
+stays off. Set `GENRATOR_STABLE_KINGDOM_ENABLED=false` to get the dynamic game back. Some flicker can
+remain because the video model redraws moving frames.
+
 For actual AI video transformation rather than the offline tint preview, configure Decart as described
 in [the restyle provider setup](restyle-provider.md). It also works with `--no-music`.
 

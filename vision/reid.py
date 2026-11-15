@@ -16,7 +16,9 @@ remembered for `OBJECT_FORGET_S`. A new track takes a remembered ID when
   only a moment ago near the same spot in the frame, ≥ `NEAR_HIST_SIMILARITY`.
 
 Among several candidates the most similar wins. An ID that is visible right now is never handed out
-twice. Two look-alike objects of the same class (two identical red cups) can swap IDs; that is the price
+twice. The tracker can also swap IDs while the object never leaves the view (a missed frame, a jump in
+its box): the old ID was in view last frame, so it is offered to the new track at once instead of
+waiting a frame for the gallery, and the object keeps its ID (and so its role). Two look-alike objects of the same class (two identical red cups) can swap IDs; that is the price
 of not knowing where the robot is.
 """
 from __future__ import annotations
@@ -106,7 +108,9 @@ class ReId:
 
     def _match(self, cls: str, pos, hist, ts: float, taken: set[int]) -> int | None:
         best, best_s = None, -math.inf
-        for out_id, m in self._lost.items():
+        # In view last frame but not claimed this frame (its tracker id vanished) counts as just lost.
+        candidates = {**self._active, **self._lost}
+        for out_id, m in candidates.items():
             if out_id in taken or not compatible(cls, m.cls):
                 continue
             s = similarity(hist, m.hist)

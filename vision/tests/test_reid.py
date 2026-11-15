@@ -102,3 +102,22 @@ def test_reset_forgets():
     reid.apply([], 1.0, scene())
     reid.reset()
     assert [t.id for t in reid.apply([tr(12, 300, 400)], 2.0, scene((300, 400, RED)))] == [12]
+
+
+def test_tracker_id_swap_while_in_view_keeps_the_same_object():
+    """The tracker drops track 7 and starts track 8 on the same cup in the very next frame (no gap
+    out of view). The cup must keep id 7, or the world gives it a second role."""
+    reid = ReId(CFG)
+    reid.apply([tr(7, 300, 400)], 0.0, scene((300, 400, RED)))
+    reid.apply([tr(7, 302, 400)], 0.1, scene((302, 400, RED)))
+    out = reid.apply([tr(8, 305, 401)], 0.2, scene((305, 401, RED)))
+    assert [t.id for t in out] == [7]
+    assert [t.id for t in reid.apply([tr(8, 306, 401)], 0.3, scene((306, 401, RED)))] == [7]
+
+
+def test_handover_never_steals_an_id_that_is_still_in_view():
+    reid = ReId(CFG)
+    reid.apply([tr(7, 300, 400)], 0.0, scene((300, 400, RED)))
+    # Track 7 is still there; a new red cup appearing beside it must not take id 7.
+    out = reid.apply([tr(7, 300, 400), tr(9, 340, 400)], 0.1, scene((300, 400, RED), (340, 400, RED)))
+    assert sorted(t.id for t in out) == [7, 9]

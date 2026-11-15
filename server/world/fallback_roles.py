@@ -183,3 +183,16 @@ def pick_role(world, cls, taken_roles, *, obj_id=0, vocab=None) -> dict:
         "name": make_name(best["role"], info, f"{obj_id}|{info.get('setting', '')}"),
         "behaviour": best.get("behaviour", "neutral"),
     }
+
+
+def class_role(world, cls, *, vocab=None) -> dict:
+    """Stable Kingdom mode: one fixed role per detector class in a world.
+
+    Ignores object ids and which roles are already taken, so every bottle becomes the same
+    tower even if vision loses its id and sees it as a new object.
+    """
+    cls = str(cls or "object").lower()
+    info = _world_info(world)
+    role = pick_role(world, cls, [], obj_id=f"class:{cls}", vocab=vocab)
+    role["name"] = make_name(role["role"], info, f"class:{cls}|{info.get('setting', '')}")
+    return role

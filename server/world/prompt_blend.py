@@ -19,6 +19,8 @@ import asyncio
 import time
 from typing import Any
 
+from server.world import stable
+
 MAX_CHARS = 400
 TICK_S = 0.05
 
@@ -113,7 +115,10 @@ class PromptBlender:
 
 
 async def run(hub: Any, config: dict | None = None, clock=time.time) -> None:
-    """Brain entrypoint (C7)."""
+    """Brain entrypoint (C7). In stable Kingdom mode there is nothing to blend: the composer keeps
+    publishing the one fixed prompt, so this module does not subscribe at all."""
+    if stable.enabled(config):
+        return
     blender = PromptBlender()
 
     async def on_prompt(env: dict) -> None:

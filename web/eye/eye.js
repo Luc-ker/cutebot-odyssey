@@ -8,7 +8,7 @@
 
 import { connectHub } from "../common/hub.js";
 import { receivePhoneStream, onStream } from "./receiver.js";
-import { createRestyler } from "./restyler.js";
+import { createRestyler, stablePrompt } from "./restyler.js";
 
 const $ = (id) => document.getElementById(id);
 const stage = $("stage");
@@ -81,17 +81,24 @@ async function main() {
   }, 1000);
 
   // ---- prompt ------------------------------------------------------------------------------
-  let gotPrompt = false;
-  hub.sub("video.prompt", (env) => {
-    if (typeof env.data?.prompt !== "string") return;
-    gotPrompt = true;
-    restyler.setPrompt(env.data.prompt);
-  });
-  // Until the composer (T29) speaks, use the world's own prompt so the style is right from the start.
-  hub.sub("world.current", (env) => {
-    const p = env.data?.world?.restyle_prompt;
-    if (!gotPrompt && p) restyler.setPrompt(p);
-  });
+  const lockedPrompt = stablePrompt(config);
+  if (lockedPrompt) {
+    // Stable Kingdom mode: one prompt for the whole run, set before the renderer connects, so
+    // objects, hands and world events can never restyle the scene mid-demo.
+    restyler.setPrompt(lockedPrompt);
+  } else {
+    let gotPrompt = false;
+    hub.sub("video.prompt", (env) => {
+      if (typeof env.data?.prompt !== "string") return;
+      gotPrompt = true;
+      restyler.setPrompt(env.data.prompt);
+    });
+    // Until the composer (T29) speaks, use the world's own prompt so the style is right from the start.
+    hub.sub("world.current", (env) => {
+      const p = env.data?.world?.restyle_prompt;
+      if (!gotPrompt && p) restyler.setPrompt(p);
+    });
+  }
 
   // ---- stream ------------------------------------------------------------------------------
   let current = null;

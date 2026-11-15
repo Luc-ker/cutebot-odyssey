@@ -21,6 +21,8 @@ import math
 import time
 from dataclasses import dataclass
 
+from server.world import stable
+
 ENTER_AFTER_S = 0.3
 LEAVE_AFTER_S = 0.8
 MATCH_DIST = 0.35
@@ -89,6 +91,10 @@ class GiantTracker:
 
 
 async def run(hub, config, *, clock=time.time):
+    if stable.enabled(config):
+        # Stable Kingdom mode: hands and people reaching over the table never trigger the giant
+        # transformation (prompt, eye shadow, narration, threat reactions all key off these events).
+        return
     tracker = GiantTracker()
 
     async def publish(events):

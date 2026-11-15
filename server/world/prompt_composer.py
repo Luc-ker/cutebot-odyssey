@@ -8,6 +8,9 @@ and publishes it on ``video.prompt`` only when the text changes, at most twice a
 capped at 400 characters. While a ``world.transition`` is running the blender (T30) owns
 ``video.prompt``, so this module stays silent for that window.
 
+Stable Kingdom mode (``STABLE_KINGDOM_ENABLED``, see ``server/world/stable.py``) replaces all of that
+with one fixed prompt: facing objects, giants and transitions never change the text.
+
 Contracts: C3 (``world.current``, ``world.objects``, ``robot.state``, ``world.event``,
 ``world.transition``, ``video.prompt``, ``system.reset``), C4 (World), C5 (roles.json).
 """
@@ -19,6 +22,8 @@ import json
 import time
 from pathlib import Path
 from typing import Any
+
+from server.world import stable
 
 MAX_CHARS = 400
 MIN_INTERVAL_S = 0.5  # at most 2 publishes per second
@@ -116,8 +121,10 @@ class PromptComposer:
     fake clock; :func:`run` wires it to the hub.
     """
 
-    def __init__(self, vocab: dict[str, str] | None = None):
+    def __init__(self, vocab: dict[str, str] | None = None, fixed_prompt: str | None = None):
         self.vocab = load_vocab() if vocab is None else vocab
+        # Stable mode: this exact text is the only prompt ever published.
+        self.fixed_prompt = fixed_prompt
         self.reset()
 
     def reset(self) -> None:
@@ -162,17 +169,21 @@ class PromptComposer:
             self.world = data["to"]
             self.roles = {}
         # The blender's last prompt replaces ours on screen, so republish once the window ends.
-        self.last_text = None
+        # (Stable mode has no blender, so the fixed prompt is still on screen.)
+        if not self.fixed_prompt:
+            self.last_text = None
 
     # ---- output -----------------------------------------------------------------
     def current_text(self) -> str | None:
+        if self.fixed_prompt:
+            return self.fixed_prompt
         if not self.world:
             return None
         facing_role = self.roles.get(self.facing_id) if self.facing_id is not None else None
         return compose(self.world, facing_role, bool(self.giants), self.vocab)
 
     def tick(self, now: float) -> str | None:
-        if now < self.transition_until:
+        if now < self.transition_until and not self.fixed_prompt:
             return None
         text = self.current_text()
         if text is None or text == self.last_text:
@@ -185,7 +196,7 @@ class PromptComposer:
 
 async def run(hub: Any, config: dict | None = None, clock=time.time) -> None:
     """Brain entrypoint (C7): subscribe, then publish ``video.prompt`` as inputs change."""
-    composer = PromptComposer()
+    composer = PromptComposer(fixed_prompt=stable.prompt(config) if stable.enabled(config) else None)
 
     def handler(fn, with_time=False):
         async def cb(env: dict) -> None:

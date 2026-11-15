@@ -196,3 +196,25 @@ test("late Decart connection cannot replace or stop the next phone session", asy
   assert.deepEqual(disconnected, ['old', 'new']);
   assert.deepEqual(stopped, ['old', 'new']);
 });
+
+import { stablePrompt } from "./restyler.js";
+
+test("stablePrompt locks the Kingdom prompt only in stable mode", () => {
+  assert.equal(stablePrompt({}), null);
+  assert.equal(stablePrompt({ STABLE_KINGDOM_ENABLED: false, STABLE_KINGDOM_PROMPT: "x" }), null);
+  assert.equal(stablePrompt({ STABLE_KINGDOM_ENABLED: true, STABLE_KINGDOM_PROMPT: "  " }), null);
+  assert.equal(stablePrompt({ STABLE_KINGDOM_ENABLED: true, STABLE_KINGDOM_PROMPT: " a miniature kingdom " }),
+    "a miniature kingdom");
+  assert.equal(stablePrompt({ STABLE_KINGDOM_ENABLED: true, STABLE_KINGDOM_PROMPT: "y".repeat(500) }).length, 400);
+});
+
+test("a prompt set before start reaches the renderer at connect time", async () => {
+  const seen = [];
+  const r = createRestyler({ RESTYLE_PROVIDER: "fake" }, {
+    now: () => 0, setInterval: () => 1, clearInterval: () => {},
+    makeSurface: () => ({ async start(_s, _f, getTint) { seen.push(getTint()); return {}; }, stop() {} }),
+  });
+  r.setPrompt("a miniature kingdom");
+  await r.start({});
+  assert.ok(seen[0].strength > 0); // "kingdom" tint applied from the first frame
+});

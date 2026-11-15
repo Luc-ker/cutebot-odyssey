@@ -63,8 +63,12 @@ log = logging.getLogger("acceptance")
 
 
 def test_config(**overrides) -> dict:
-    """The shared config with test overrides (e.g. a short grace period)."""
+    """The shared config with test overrides (e.g. a short grace period).
+
+    These scenarios exercise the dynamic game (giants, music worlds, per-object prompts), so stable
+    Kingdom demo mode is off unless a test turns it back on."""
     cfg = dict(load_config())
+    cfg["STABLE_KINGDOM_ENABLED"] = False
     cfg.update(overrides)
     return cfg
 

@@ -208,6 +208,13 @@ function decartProvider(config, deps, emitFrame) {
 
 export const PROVIDERS = { fake: fakeProvider, decart: decartProvider };
 
+/** Pure: the locked Kingdom prompt when stable mode is on (C10 STABLE_KINGDOM_*), else null. */
+export function stablePrompt(config = {}) {
+  if (!config.STABLE_KINGDOM_ENABLED) return null;
+  const text = String(config.STABLE_KINGDOM_PROMPT ?? "").trim();
+  return text ? text.slice(0, 400) : null;
+}
+
 // ---------------------------------------------------------------------------------------------
 
 /**

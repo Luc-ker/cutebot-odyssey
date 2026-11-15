@@ -17,6 +17,7 @@ from server.common.config import load_config
 from server.gemini.client import compose_world
 from server.gemini.guard import guard_world
 from server.world.fallback_roles import load_vocab, pick_role
+from server.world import stable
 from server.world.fallback_worlds import load_fallback_worlds
 from server.world.memory import RoleMemory
 from server.world.registry import ObjectRegistry
@@ -71,6 +72,9 @@ class WorldScheduler:
         self.snapshot_fetcher = snapshot_fetcher
         self.vocab = vocab if vocab is not None else load_vocab()
         self.clock = clock
+        # Stable Kingdom mode: arrivals (after settling) is the only role assigner, so adopting the
+        # world never hands unsettled detections a role of their own.
+        self.stable = stable.enabled(config)
         self.current: dict | None = None
         self.previous_id: str | None = None
         self.silent = True
@@ -193,7 +197,7 @@ class WorldScheduler:
                         if isinstance(role, dict) and "object_id" in role}
         assigned = []
         used = []
-        for item in self.object_registry.all():
+        for item in ([] if self.stable else self.object_registry.all()):
             obj = _object_dict(item)
             object_id = int(obj["id"])
             role = self.role_memory.get(world_id, object_id) or source_roles.get(object_id)
@@ -232,7 +236,9 @@ async def run(hub, config: dict | None = None) -> None:
     from server.audio.capture import AudioInput
 
     config = config or load_config()
-    music_enabled = config.get("MUSIC_ENABLED", True)
+    stable_kingdom = stable.enabled(config)
+    # Stable Kingdom mode never composes music worlds, so it never opens the microphone either.
+    music_enabled = config.get("MUSIC_ENABLED", True) and not stable_kingdom
     audio = AudioInput(config) if music_enabled else None
     scheduler = WorldScheduler(hub, config, audio_input=audio,
                                clip_store=ClipStore(audio) if audio else None,
@@ -243,6 +249,8 @@ async def run(hub, config: dict | None = None) -> None:
         fn(env.get("data") or {})
 
     async def on_world_select(env: dict):
+        if stable_kingdom:
+            return  # the Kingdom stays locked; no world switches mid-demo
         await scheduler.select(str((env.get("data") or {}).get("name", "")))
 
     async def on_reset(_env: dict):
