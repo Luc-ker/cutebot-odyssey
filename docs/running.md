@@ -89,9 +89,10 @@ assignment may use Gemini; local role assignment takes over if it is unavailable
 
 **Stable Kingdom mode** (`STABLE_KINGDOM_ENABLED`, on by default for the demo) keeps the rendered scene
 steady. The renderer gets one fixed miniature-world prompt (`STABLE_KINGDOM_PROMPT`: a handheld camera walking
-through a solid 3D miniature kingdom; bottles become watchtowers and laptops fortress walls that stay
-fixed where the real objects stand and never revert, under the desk is a cave, a gigantic castle stands
-in the far distance) and nothing else ever changes it: no per-object, giant or world-transition prompts, and
+through a solid 3D fairy-tale kingdom whose view follows the camera; tall shapes become watchtowers, boxy
+shapes fortress walls, flat surfaces meadows, dark gaps caves, and a gigantic castle stands in the far distance). The
+prompt never names real objects (bottle, laptop, desk): the renderer draws any noun it reads, so naming
+them put a table with bottles inside the castle world) and nothing else ever changes it: no per-object, giant or world-transition prompts, and
 `world.select` is ignored. A new object must stay in view for `OBJECT_SETTLE_S` (1 s) before it gets a
 role, and its role is chosen locally by detector class, so every bottle is the same watchtower and no
 Gemini role call is made. Hands and people over the table no longer trigger giant events. The microphone

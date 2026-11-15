@@ -132,7 +132,7 @@ test("Decart publishes an owned model-sized stream, refreshes tokens and cleans 
           assert.equal(await options.apiKeyProvider(), "ephemeral-1");
           assert.equal(await options.apiKeyProvider(), "ephemeral-2");
           assert.equal(settings.initialState.prompt.text, "Kingdom");
-          assert.equal(settings.initialState.prompt.enhance, true); // default lucy-2.6 edit model
+          assert.equal(settings.initialState.prompt.enhance, false); // literal prompt, even for lucy-2.6
           settings.onRemoteStream(remote);
           return rt;
         } } };
@@ -221,8 +221,8 @@ test("a prompt set before start reaches the renderer at connect time", async () 
   assert.ok(seen[0].strength > 0); // "kingdom" tint applied from the first frame
 });
 
-test("prompt enhancement is on for Lucy edit models and off for the restyle model", () => {
-  assert.equal(decartEnhance(), true);
-  assert.equal(decartEnhance("lucy-2.6"), true);
+test("prompt enhancement is off for every model so the prompt is used literally", () => {
+  assert.equal(decartEnhance(), false);
+  assert.equal(decartEnhance("lucy-2.6"), false);
   assert.equal(decartEnhance("lucy-restyle-2"), false);
 });

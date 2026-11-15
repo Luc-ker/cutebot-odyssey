@@ -91,9 +91,9 @@ const client = createDecartClient({
 const rt = await client.realtime.connect(phoneStream, {
   model: models.realtime("lucy-2.6"),
   onRemoteStream: (styled) => { video.srcObject = styled; },
-  initialState: { prompt: { text: firstPrompt, enhance: true } },  // false for lucy-restyle-*
+  initialState: { prompt: { text: firstPrompt, enhance: false } },  // literal prompt
 });
-rt.setPrompt(nextPrompt, { enhance: true });   // on every video.prompt (never in stable Kingdom mode)
+rt.setPrompt(nextPrompt, { enhance: false });   // on every video.prompt (never in stable Kingdom mode)
 rt.on("stats", s => ...);                       // WebRTC stats incl. glass-to-glass latency
 rt.on("error", e => ...);                       // e.code: INVALID_API_KEY, TOKEN_EXPIRED, WEB_RTC_ERROR, ...
 rt.disconnect();
@@ -101,8 +101,8 @@ rt.disconnect();
 
 Notes and open questions:
 
-- `enhance` is on for the Lucy 2.x edit models, as Decart's Lucy 2.6 prompting guide recommends, and
-  off for `lucy-restyle-*`, which gets our text literally. Lucy 2.6 prompts work best as a command
+- `enhance` is off for every model, including Lucy 2.6 (whose guide recommends it): in live tests the
+  enhancer turned our prompt into extra scene items, such as a table with bottles inside the castle world. Lucy 2.6 prompts work best as a command
   sentence followed by "The output will show ...", about 40–65 words and at most ~750 characters.
 - **Keys:** the hub mints restricted short-lived client tokens; the browser uses `apiKeyProvider` to refresh credentials before connecting or reconnecting. Never place the permanent key in shared config or browser storage.
 - **Model id:** default `lucy-2.6`; override with `GENRATOR_DECART_MODEL` in the local environment

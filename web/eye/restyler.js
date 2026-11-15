@@ -16,10 +16,11 @@ const DECART_SDK_URL = "https://esm.sh/@decartai/sdk@0.2.14";
 // lucy-2.6 edits the scene (replaces objects); lucy-restyle-2 only changes style and keeps every shape.
 const DECART_MODEL = "lucy-2.6";
 
-/** Pure: Decart's prompt enhancer suits the Lucy 2.x edit models (their docs recommend it); the
- * restyle model gets our text literally. */
-export function decartEnhance(modelName = DECART_MODEL) {
-  return !String(modelName).startsWith("lucy-restyle");
+/** Pure: Decart's prompt enhancer stays off for every model. Live lucy-2.6 tests (2026-11-15) showed
+ * it expanding our prompt into extra scene items (a table with bottles and a laptop inside the castle
+ * world), so the renderer always gets our text literally. */
+export function decartEnhance(_modelName = DECART_MODEL) {
+  return false;
 }
 
 // ---------------------------------------------------------------------------------------------

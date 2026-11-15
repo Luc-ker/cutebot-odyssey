@@ -15,15 +15,15 @@ When stable mode is on:
 from __future__ import annotations
 
 DEFAULT_PROMPT = (
-    "Transform the real scene into a sunlit miniature medieval kingdom filmed by a handheld "
-    "camera walking through it at ground level, and permanently replace every bottle with a tall "
-    "stone watchtower and every laptop with castle fortress walls, each built exactly where the "
-    "real object stands with the same position, size and outline. The output will show one solid, "
-    "physically real 3D world with true depth and parallax: the desk is a green meadow, the dark "
-    "space under the desk is a vast cave, a gigantic castle rises in the far distance, and every "
-    "building stays fixed in place and fully transformed, never reverting to the original object, "
-    "as the camera moves, turns and walks closer. Consistent lighting, textures and style in "
-    "every frame."
+    "Transform the entire view into an enchanted fairy-tale kingdom from a cinematic fantasy "
+    "film, seen through a handheld camera walking through it. Everything in view becomes part of "
+    "the kingdom in the same place and size: tall shapes become slender watchtowers with pointed "
+    "blue spires and banners, wide or boxy shapes become ivy-covered castle fortress walls, thin "
+    "legs and poles become gnarled trees, flat surfaces become flower meadows and cobblestone "
+    "paths, dark gaps become glowing caves. The output will show weathered stone, moss and "
+    "wildflowers in golden light with soft mist, a castle on a far hill, and a solid 3D world "
+    "whose view pans and turns with every camera movement while the buildings stay anchored, with "
+    "nothing modern."
 )
 DEFAULT_SETTLE_S = 1.0
 MAX_CHARS = 750  # Decart Lucy 2.6 prompt guidance: up to ~750 characters

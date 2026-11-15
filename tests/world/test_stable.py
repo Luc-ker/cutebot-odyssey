@@ -21,9 +21,12 @@ def test_shipped_config_turns_stable_mode_on_with_a_miniature_kingdom_prompt():
     assert stable.enabled(cfg)
     text = stable.prompt(cfg)
     assert len(text) <= 750
-    for phrase in ("miniature", "kingdom", "watchtower", "under the desk", "cave", "castle",
-                   "the output will show"):
+    for phrase in ("fairy-tale", "kingdom", "watchtower", "fortress walls", "cave", "castle",
+                   "camera movement", "the output will show"):
         assert phrase in text.lower()
+    # Naming real objects makes the renderer draw them inside the kingdom, so the prompt never does.
+    for word in ("bottle", "laptop", "desk", "table"):
+        assert word not in text.lower()
 
 
 def test_stable_mode_is_off_without_the_key_and_prompt_falls_back():
@@ -151,7 +154,7 @@ def test_renderer_config_exposes_effective_stable_settings(monkeypatch):
     assert renderer_config()["STABLE_KINGDOM_ENABLED"] is False
     monkeypatch.setenv("GENRATOR_STABLE_KINGDOM_ENABLED", "true")
     cfg = renderer_config()
-    assert cfg["STABLE_KINGDOM_ENABLED"] is True and "miniature" in cfg["STABLE_KINGDOM_PROMPT"]
+    assert cfg["STABLE_KINGDOM_ENABLED"] is True and "fairy-tale" in cfg["STABLE_KINGDOM_PROMPT"]
     assert not any("KEY" in k for k in cfg)
     monkeypatch.delenv("GENRATOR_DECART_MODEL", raising=False)
     assert renderer_config()["DECART_MODEL"] == "lucy-2.6"
