@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 230" width="220" height="230">
+  <defs>
+    <linearGradient id="wall" x1="0" x2="1"><stop offset="0" stop-color="#fbf3df"/><stop offset=".6" stop-color="#e2d3b0"/><stop offset="1" stop-color="#ad9b74"/></linearGradient>
+    <radialGradient id="dome" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#ffe9a0"/><stop offset=".5" stop-color="#e0a92e"/><stop offset="1" stop-color="#8a5b12"/></radialGradient>
+    <radialGradient id="grass" cx=".4" cy=".3"><stop offset="0" stop-color="#7fb04a"/><stop offset="1" stop-color="#3f6b26"/></radialGradient>
+  </defs>
+  <g stroke="#2e2118" stroke-width="2.5" stroke-linejoin="round">
+    <ellipse cx="110" cy="218" rx="106" ry="11" fill="url(#grass)"/>
+    <path d="M20 130h180v84H20z" fill="url(#wall)"/>
+    <path d="M60 96h100v34H60z" fill="url(#wall)"/>
+    <path d="M60 98c0-46 100-46 100 0z" fill="url(#dome)"/>
+    <path d="M110 64V30" fill="none"/>
+    <circle cx="110" cy="28" r="5" fill="#f3c64a"/>
+    <path d="M14 132c0-30 40-30 40 0z" fill="url(#dome)"/>
+    <path d="M166 132c0-30 40-30 40 0z" fill="url(#dome)"/>
+    <path d="M26 132h22v82H26zM172 132h22v82h-22z" fill="url(#wall)"/>
+    <path d="M94 214v-36a16 16 0 0 1 32 0v36z" fill="#3c2a5a"/>
+  </g>
+  <g fill="#3c2a5a"><path d="M68 160v-14a7 7 0 0 1 14 0v14zM138 160v-14a7 7 0 0 1 14 0v14zM100 120v-12a10 10 0 0 1 20 0v12z"/></g>
+  <g fill="#fff" opacity=".35"><path d="M30 136h8v74h-8zM64 100h10v28H64z"/><ellipse cx="88" cy="74" rx="10" ry="6"/></g>
+  <path d="M22 130h176" stroke="#c99a2c" stroke-width="5"/>
+</svg>

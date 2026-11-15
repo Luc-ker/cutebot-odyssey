@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 160" width="220" height="160">
+  <defs>
+    <linearGradient id="rock" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a69a88"/><stop offset=".6" stop-color="#6c6253"/><stop offset="1" stop-color="#3a342c"/></linearGradient>
+    <radialGradient id="dark" cx=".5" cy=".8"><stop offset="0" stop-color="#050302"/><stop offset="1" stop-color="#22190f"/></radialGradient>
+  </defs>
+  <g stroke="#1b1510" stroke-width="2.5" stroke-linejoin="round">
+    <ellipse cx="110" cy="152" rx="106" ry="8" fill="#5a4c3a"/>
+    <path d="M6 154c4-50 24-90 60-112 30-18 66-22 96-4 34 22 52 70 54 116z" fill="url(#rock)"/>
+    <path d="M70 154c0-40 16-70 40-70s40 30 40 70z" fill="url(#dark)"/>
+    <path d="M40 154l10-26 14 26zM156 154l12-30 14 30z" fill="url(#rock)"/>
+    <path d="M60 50c10-8 20-6 26 0-8 0-18 4-26 0zM150 40c8-6 18-4 22 2-8 0-14 2-22-2z" fill="#5f8f3a" stroke-width="2"/>
+  </g>
+  <g fill="#ff9a3a" opacity=".9"><circle cx="100" cy="128" r="3"/><circle cx="120" cy="128" r="3"/></g>
+  <path d="M30 120c6-34 26-62 52-74-18 20-32 44-38 74z" fill="#fff" opacity=".22"/>
+</svg>

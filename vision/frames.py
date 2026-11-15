@@ -9,6 +9,7 @@ come from:
     hub.sub("camera.frame", frames.on_envelope)
     ts, frame = frames.read(timeout=5.0)    # blocks until a frame newer than the last read()
     ts, frame = frames.latest()             # returns at once; (None, None) before the first frame
+    frames.read_client_ts                   # the eye page's `t` for the frame read() last returned, or None
 
 Only the latest frame is kept, in memory. Nothing is written to disk.
 """
@@ -47,14 +48,17 @@ class HubFrames:
         self._cond = threading.Condition()
         self._frame: np.ndarray | None = None
         self._ts: float | None = None
+        self._client_ts: float | None = None
+        self.read_client_ts: float | None = None
         self._seq = 0
         self._read_seq = 0
         self._stamps: deque[float] = deque(maxlen=30)
         self.bad = 0
 
-    def push(self, frame: np.ndarray, ts: float | None = None) -> None:
+    def push(self, frame: np.ndarray, ts: float | None = None, client_ts: float | None = None) -> None:
         with self._cond:
             self._frame, self._ts = frame, float(ts if ts is not None else time.time())
+            self._client_ts = client_ts
             self._seq += 1
             self._stamps.append(time.monotonic())
             self._cond.notify_all()
@@ -67,7 +71,9 @@ class HubFrames:
                 log.warning("undecodable camera.frame (%d so far)", self.bad)
             return
         ts = env.get("ts")
-        self.push(frame, ts if isinstance(ts, (int, float)) else None)
+        t = (env.get("data") or {}).get("t")
+        client_ts = float(t) if isinstance(t, (int, float)) and not isinstance(t, bool) else None
+        self.push(frame, ts if isinstance(ts, (int, float)) else None, client_ts)
 
     def read(self, timeout: float | None = 5.0) -> tuple[float, np.ndarray]:
         with self._cond:
@@ -75,6 +81,7 @@ class HubFrames:
             if not ok:
                 raise TimeoutError("no new camera.frame")
             self._read_seq = self._seq
+            self.read_client_ts = self._client_ts
             return self._ts, self._frame
 
     def latest(self) -> tuple[float | None, np.ndarray | None]:

@@ -1,7 +1,8 @@
 // Robot's-eye display page (T31, whitepaper §7.2, §4): the main screen of the game.
 // phone stream (T26) -> restyler (T28) -> full-screen video; `video.prompt` -> restyler.setPrompt.
 // The raw phone feed always plays underneath, so a failing restyler still leaves a picture.
-// Publishes `video.status {mode, latency_ms}` every second. Keys: F fullscreen, R force raw.
+// Publishes `video.status {mode, latency_ms}` every second. Keys: F fullscreen, R force raw,
+// D debug outlines (local renderer).
 // Overlays (HUD T32, fallback T33, pulse T34, giant T35) load as optional modules.
 // The raw feed is also sampled at VISION_HZ and sent to the vision service on `camera.frame` (frames.js):
 // the phone's view is the only camera, so this page must be open for objects and giants to be seen.
@@ -44,7 +45,13 @@ async function main() {
   const hub = await connectHub(`${proto}//${location.host}/hub`, "eye");
   hub.onStatus?.((s) => { $("conn").hidden = s === "open"; });
 
-  const restyler = createRestyler(config);
+  // The local renderer reads vision.state / world.objects itself, so it gets the hub.
+  const restyler = createRestyler(config, { hub });
+  const providerName = restyler.provider.name;
+  const labels = {
+    local: { connecting: "Starting local renderer…", live: "Local renderer", paused: "Renderer paused · showing camera" },
+    decart: { connecting: "Connecting Kingdom renderer…", live: "AI Kingdom live", paused: "AI paused · showing camera" },
+  }[providerName];
 
   const [, fallback] = await Promise.all([
     optional("./pulse.js", "mountPulse", $("slot-pulse"), hub),
@@ -68,9 +75,8 @@ async function main() {
   const applyMode = () => { stage.dataset.mode = mode(); };
   restyler.onStatus((status) => {
     applyMode();
-    if (config.RESTYLE_PROVIDER !== "decart" || !rendererStarted || rendererError) return;
-    $("renderer").textContent = status.ok
-      ? "AI Kingdom live" : "AI paused · showing camera";
+    if (!labels || !rendererStarted || rendererError) return;
+    $("renderer").textContent = status.ok ? labels.live : labels.paused;
   });
   fallback?.onChange(applyMode);
 
@@ -110,21 +116,19 @@ async function main() {
     rawVideo.srcObject = stream;
     rawVideo.play().catch(() => {});
     $("waiting").hidden = true;
-    $("renderer").textContent = config.RESTYLE_PROVIDER === "decart"
-      ? "Connecting Kingdom renderer…" : "Camera preview · AI renderer off";
+    $("renderer").textContent = labels ? labels.connecting : "Camera preview · renderer off";
     try {
       const out = await restyler.start(stream);
       if (current !== stream) return; // a newer stream arrived meanwhile
       styledVideo.srcObject = out;
       styledVideo.play().catch(() => {});
       rendererStarted = true;
-      if (config.RESTYLE_PROVIDER === "decart") $("renderer").textContent = restyler.status.ok
-        ? "AI Kingdom live" : "AI connected · waiting for frames";
+      if (labels) $("renderer").textContent = restyler.status.ok ? labels.live : "Renderer ready · waiting for frames";
     } catch (e) {
       if (current !== stream) return;
       console.warn("[eye] restyler failed, showing the raw feed:", e.message);
       rendererError = e.message;
-      $("renderer").textContent = `AI rendering unavailable: ${e.message}`;
+      $("renderer").textContent = `Rendering unavailable: ${e.message}`;
     }
     applyMode();
   }
@@ -143,6 +147,9 @@ async function main() {
       fallback?.setForced(forcedRaw);
       applyMode();
       console.info(`[eye] raw mode ${forcedRaw ? "forced" : "auto"}`);
+    } else if (key === "d") {
+      const c = restyler.provider.compositor;
+      if (c) c.setDebug(!c.debug);
     }
   });
 

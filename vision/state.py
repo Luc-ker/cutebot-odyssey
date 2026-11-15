@@ -5,6 +5,10 @@
 Pure function: pixel-space tracks and giants from the robot's camera in, one `vision.state` payload out.
 Positions and sizes are in **view units** (C1): the camera frame is `0 ≤ x ≤ 1` left to right and
 `0 ≤ y ≤ 1` top to bottom. `GiantIds` gives giants stable "g<n>" ids across frames.
+
+Objects from a segmentation model also get `outline`: their mask contour as [x, y] points in view units, used
+by the eye page's local renderer to cover the real object. `client_ts`, when given, is the eye page's own
+timestamp for the frame (`camera.frame.t`), so the eye page can tell how old this state is.
 """
 from __future__ import annotations
 
@@ -26,12 +30,23 @@ def box_to_view(bbox: Sequence[float], frame_shape: Sequence[int]) -> tuple[list
     return [(x1 + x2) / 2, (y1 + y2) / 2], [x2 - x1, y2 - y1]
 
 
-def build_state(tracks, giants: list[dict], frame_shape: Sequence[int], ts: float) -> dict:
+def outline_to_view(points, frame_shape: Sequence[int]) -> list[list[float]]:
+    """Pixel outline points -> view units, clamped to [0, 1] and rounded to 0.001."""
+    h, w = frame_shape[:2]
+    return [[round(_clamp01(float(x) / w), 3), round(_clamp01(float(y) / h), 3)] for x, y in points]
+
+
+def build_state(tracks, giants: list[dict], frame_shape: Sequence[int], ts: float,
+                client_ts: float | None = None) -> dict:
     objects = []
     for t in tracks:
         pos, size = box_to_view(t.bbox, frame_shape)
-        objects.append({"id": int(t.id), "cls": str(t.cls), "pos": pos, "size": size,
-                        "conf": round(_clamp01(t.conf), 3)})
+        obj = {"id": int(t.id), "cls": str(t.cls), "pos": pos, "size": size,
+               "conf": round(_clamp01(t.conf), 3)}
+        outline = (getattr(t, "extra", None) or {}).get("outline")
+        if outline and len(outline) >= 3:
+            obj["outline"] = outline_to_view(outline, frame_shape)
+        objects.append(obj)
 
     out_giants = []
     for i, g in enumerate(giants):
@@ -39,7 +54,10 @@ def build_state(tracks, giants: list[dict], frame_shape: Sequence[int], ts: floa
         out_giants.append({"id": str(g.get("id") or f"g{i + 1}"), "kind": g["kind"], "pos": pos, "size": size,
                            "edge": g["edge"]})
 
-    return {"frame_ts": float(ts), "objects": objects, "giants": out_giants}
+    state = {"frame_ts": float(ts), "objects": objects, "giants": out_giants}
+    if client_ts is not None:
+        state["client_ts"] = float(client_ts)
+    return state
 
 
 class GiantIds:

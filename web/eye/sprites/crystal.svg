@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 200" width="160" height="200">
+  <defs>
+    <linearGradient id="c1" x1="0" x2="1"><stop offset="0" stop-color="#e0f6ff"/><stop offset=".5" stop-color="#7ec8f0"/><stop offset="1" stop-color="#3a6fc0"/></linearGradient>
+    <linearGradient id="c2" x1="0" x2="1"><stop offset="0" stop-color="#f1dcff"/><stop offset=".5" stop-color="#b78cf0"/><stop offset="1" stop-color="#6a3fb0"/></linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#bfe8ff" stop-opacity=".7"/><stop offset="1" stop-color="#bfe8ff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="80" cy="110" rx="78" ry="90" fill="url(#glow)"/>
+  <g stroke="#1c2340" stroke-width="2.5" stroke-linejoin="round">
+    <ellipse cx="80" cy="192" rx="74" ry="7" fill="#5a5470"/>
+    <path d="M30 192l-6-60 18-30 14 30 4 60z" fill="url(#c2)"/>
+    <path d="M60 194l-4-120 24-60 24 60-4 120z" fill="url(#c1)"/>
+    <path d="M104 192l2-70 20-26 12 30-8 66z" fill="url(#c2)"/>
+  </g>
+  <g fill="#fff" opacity=".6"><path d="M62 78l18-62 2 176H70zM32 134l10-30 2 86h-6z"/></g>
+</svg>

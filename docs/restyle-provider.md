@@ -44,6 +44,11 @@ How to measure each row: open the spike page, pick the provider, press Start, th
 Measure on the network we'll actually use (venue wifi, or a phone hotspot as backup), with the phone
 feed at 960×540.
 
+> **Update 2026-11-15:** the default renderer is now **`local`** ([local-renderer.md](local-renderer.md)):
+> sprites drawn over the tracked objects on the laptop, no network service. Decart's free tier was too
+> limited for demos and its restyle did not keep real objects recognisable. Decart stays available as an
+> option, either on the raw camera or (`GENRATOR_DECART_INPUT=composited`) on the local renderer's output.
+
 ## Recommendation (provisional, pending the numbers above)
 
 - **Primary: Decart Lucy Restyle.** It's the only candidate with a documented browser WebRTC SDK and a
@@ -63,7 +68,8 @@ The Eye page requests a five-minute token immediately before each connection or 
 `/api/restyle/token`. The hub keeps the permanent key server-side, restricts tokens to the selected
 model and requesting origin, requires a same-origin custom-header request, and marks responses
 `no-store`. The local hub is intended for a trusted LAN. The Eye status shows connection failures
-while keeping the raw camera usable. Set `GENRATOR_RESTYLE_PROVIDER=fake` for offline tint preview.
+while keeping the raw camera usable. Set `GENRATOR_RESTYLE_PROVIDER=fake` for offline tint preview, or
+`local` (the default) for the local renderer.
 The browser SDK is pinned to `@decartai/sdk@0.2.14`. Override the model with `GENRATOR_DECART_MODEL`;
 default `lucy-restyle-2`. Incoming phone frames are copied into an owned canvas stream at the
 model’s width, height and frame rate, preserving the full image with letterboxing. The SDK never owns

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="220" height="220">
+  <defs>
+    <linearGradient id="iron" x1="0" x2="1"><stop offset="0" stop-color="#6d6a72"/><stop offset=".55" stop-color="#46434c"/><stop offset="1" stop-color="#26242b"/></linearGradient>
+    <radialGradient id="ground" cx=".4" cy=".3"><stop offset="0" stop-color="#6b5a45"/><stop offset="1" stop-color="#3a2f25"/></radialGradient>
+  </defs>
+  <g stroke="#140f0c" stroke-width="2.5" stroke-linejoin="round">
+    <ellipse cx="110" cy="208" rx="106" ry="11" fill="url(#ground)"/>
+    <path d="M18 204V110l14-22 14 22v-10h128v10l14-22 14 22v94z" fill="url(#iron)"/>
+    <path d="M70 100V50l40-34 40 34v50z" fill="url(#iron)"/>
+    <path d="M18 110l-6-24 20 2zM202 110l6-24-20 2zM70 50l-10-22 24 8zM150 50l10-22-24 8z" fill="#2b2930"/>
+    <path d="M88 204v-44l22-18 22 18v44z" fill="#120d0b"/>
+    <path d="M110 16V2l24 7-24 7" fill="#a8241d"/>
+  </g>
+  <g fill="#ff8a2a" opacity=".35"><circle cx="110" cy="69" r="14"/></g>
+  <g fill="#ff8a2a"><rect x="102" y="64" width="16" height="10" rx="2"/><rect x="34" y="130" width="10" height="8" rx="2"/><rect x="176" y="130" width="10" height="8" rx="2"/></g>
+  <g fill="#a8241d" stroke="#140f0c" stroke-width="2"><path d="M54 112h18v40l-9-8-9 8zM148 112h18v40l-9-8-9 8z"/></g>
+  <g stroke="#fff" opacity=".15" stroke-width="5"><path d="M24 112v88M76 56v40"/></g>
+</svg>

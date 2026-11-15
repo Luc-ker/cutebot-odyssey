@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 150" width="220" height="150">
+  <defs>
+    <linearGradient id="fur" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b9b3ad"/><stop offset=".6" stop-color="#77716c"/><stop offset="1" stop-color="#3e3a37"/></linearGradient>
+    <linearGradient id="fur2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8f877f"/><stop offset="1" stop-color="#2f2b28"/></linearGradient>
+    <radialGradient id="grass" cx=".4" cy=".3"><stop offset="0" stop-color="#6f9a44"/><stop offset="1" stop-color="#355a22"/></radialGradient>
+  </defs>
+  <g stroke="#191512" stroke-width="2.5" stroke-linejoin="round">
+    <ellipse cx="110" cy="140" rx="106" ry="9" fill="url(#grass)"/>
+    <path d="M126 136l4-26c-10-6-12-24 0-34 14-12 40-8 50 0l10-24 6 20 8-4-4 26c6 14 2 26-8 30l2 12h-10l-4-14h-30l-4 14z" fill="url(#fur2)"/>
+    <path d="M24 138l4-30c-14-8-16-30-2-42 18-14 50-10 62-2l14-28 6 26 12-6-6 30c6 16 2 32-10 38l2 14H94l-4-16H52l-6 16z" fill="url(#fur)"/>
+  </g>
+  <g fill="#ffd23a" stroke="#191512" stroke-width="1.5"><circle cx="108" cy="62" r="3.5"/><circle cx="194" cy="76" r="3"/></g>
+  <path d="M110 80l14 4-12 6z" fill="#f2efe8" stroke="#191512" stroke-width="1.5"/>
+  <path d="M34 74c14-10 34-10 48-4-16 0-34 4-48 12z" fill="#fff" opacity=".25"/>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -8 200 248" width="200" height="248">
+  <defs>
+    <linearGradient id="stone" x1="0" x2="1"><stop offset="0" stop-color="#d9cdb4"/><stop offset=".55" stop-color="#b8a98c"/><stop offset="1" stop-color="#857761"/></linearGradient>
+    <linearGradient id="roof" x1="0" x2="1"><stop offset="0" stop-color="#4f7fd0"/><stop offset="1" stop-color="#253f80"/></linearGradient>
+    <radialGradient id="grass" cx=".4" cy=".3"><stop offset="0" stop-color="#7fb04a"/><stop offset="1" stop-color="#3f6b26"/></radialGradient>
+  </defs>
+  <g stroke="#2e2118" stroke-width="2.5" stroke-linejoin="round">
+    <ellipse cx="100" cy="228" rx="96" ry="12" fill="url(#grass)"/>
+    <path d="M52 120h96v104H52z" fill="url(#stone)"/>
+    <path d="M52 120v-12h12v12h12v-12h12v12h12v-12h12v12h12v-12h12v12h12v-12h12v12z" fill="url(#stone)"/>
+    <path d="M14 98h40v126H14z" fill="url(#stone)"/>
+    <path d="M146 98h40v126h-40z" fill="url(#stone)"/>
+    <path d="M8 100L34 40l26 60z" fill="url(#roof)"/>
+    <path d="M140 100l26-60 26 60z" fill="url(#roof)"/>
+    <path d="M76 120V60h48v60z" fill="url(#stone)"/>
+    <path d="M70 62l30-50 30 50z" fill="url(#roof)"/>
+    <path d="M86 224v-40a14 14 0 0 1 28 0v40z" fill="#4a2f1b"/>
+    <path d="M34 40V18l18 6-18 6" fill="#d6a531"/>
+    <path d="M100 12V-4l20 6-20 6" fill="#c8342b"/>
+    <path d="M166 40V18l18 6-18 6" fill="#d6a531"/>
+  </g>
+  <g fill="#2a1c12"><rect x="27" y="120" width="8" height="16" rx="4"/><rect x="159" y="120" width="8" height="16" rx="4"/><rect x="95" y="78" width="10" height="18" rx="5"/><rect x="27" y="160" width="8" height="14" rx="4"/><rect x="159" y="160" width="8" height="14" rx="4"/></g>
+  <g fill="#fff" opacity=".28"><rect x="18" y="102" width="8" height="118"/><rect x="56" y="124" width="10" height="96"/><rect x="80" y="64" width="8" height="54"/></g>
+  <g stroke="#6b5c47" stroke-width="1.2" opacity=".6"><path d="M56 150h88M56 180h88M56 205h28M118 205h26M18 140h32M150 140h32M18 190h32M150 190h32"/></g>
+</svg>
