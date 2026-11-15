@@ -4,6 +4,7 @@
   "roles": [],
   "terrain": {"open_space": "a moonlit snowfield", "under_table": "a quiet bear's den"},
   "restyle_prompt": "First-person, low along a snowy village lane at midnight, soft flakes drift past warm cottage windows beneath a blue moon, painterly fantasy.",
+  "stable_prompt": "Transform the entire view into a snowy fairy-tale village from a cinematic winter fantasy film, seen through a handheld camera walking through it. Everything in view becomes part of the village in the same place and size: tall shapes become clock towers and snow-laden pines, wide or boxy shapes become timber cottages with glowing windows, thin legs and poles become iron lamp posts and bare birches, flat surfaces become snowy lanes and frozen ponds, dark gaps become lantern-lit doorways. The output will show snow white drifts and ice blue shadows under soft midnight snowfall, a blue moon over far mountains, and a solid 3D world whose view pans and turns with every camera movement while the cottages stay anchored, with nothing modern.",
   "narration": "Snow hushes the village as the night deepens.",
   "music_signature": {"tempo_bpm": 76, "energy": 0.22, "brightness": 0.3, "chroma": [0.1, 0.05, 0.15, 0.05, 0.1, 0.05, 0.05, 0.1, 0.05, 0.15, 0.1, 0.05]}
 }

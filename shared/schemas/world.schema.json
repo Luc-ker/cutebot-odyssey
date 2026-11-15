@@ -46,6 +46,7 @@
       }
     },
     "restyle_prompt": {"type": "string", "minLength": 1, "maxLength": 400},
+    "stable_prompt": {"type": "string", "minLength": 1, "maxLength": 750},
     "narration": {"type": "string", "maxLength": 300},
     "music_signature": {
       "type": "object",

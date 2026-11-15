@@ -1,0 +1,64 @@
+/* Show controls: two hairline rings with a whispered label, bottom right. They rest almost invisible
+   so the scene stays the subject, and wake while the mouse moves. Tokens come from eye.css. */
+.controls {
+  position: absolute; right: var(--edge-x); bottom: calc(var(--edge-y) - 6px);
+  display: flex; align-items: center; gap: clamp(18px, 2.2vw, 30px);
+  pointer-events: auto;
+  opacity: .28; transition: opacity .9s ease;
+}
+.controls:not(.known) { opacity: .12; }
+body.awake .controls, .controls:focus-within { opacity: 1; }
+body.awake { cursor: default; }
+
+.ctl {
+  appearance: none; background: none; border: 0; margin: 0; padding: 6px 2px;
+  display: inline-flex; align-items: center; gap: .85em;
+  font: 300 clamp(10px, .95vw, 12px) var(--f-gothic); letter-spacing: .32em; text-transform: lowercase;
+  color: var(--ink-dim); text-shadow: var(--ink-shadow);
+  cursor: pointer;
+  transition: color .5s ease;
+}
+.ctl[aria-pressed="true"] { color: var(--ink); }
+.ctl:focus-visible { outline: 1px solid var(--ink); outline-offset: 6px; }
+.ctl:disabled { opacity: .35; cursor: default; }
+.ctl[hidden] { display: none; }
+
+/* The ring. */
+.ctl-glyph {
+  position: relative; flex: none;
+  width: 26px; height: 26px; border-radius: 50%; box-sizing: border-box;
+  border: 1px solid var(--hairline);
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  box-shadow: 0 0 12px rgba(6, 6, 8, .32);
+  transition: border-color .5s ease;
+}
+.ctl:hover:not(:disabled) .ctl-glyph, .ctl:focus-visible .ctl-glyph { border-color: var(--ink); }
+
+/* show: a small seal glows in the ring while the show runs; an empty ring when it rests. */
+.ctl-show .ctl-glyph::after {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; box-sizing: border-box;
+  border: 1px solid var(--ink-dim); background: transparent;
+  transition: background .6s ease, border-color .6s ease, box-shadow .6s ease;
+}
+.ctl-show[aria-pressed="true"] .ctl-glyph::after {
+  background: var(--seal); border-color: var(--seal);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--seal) 70%, transparent);
+}
+
+/* listen: three hairline strings that sway while listening and lie flat when off. */
+.ctl-listen .ctl-glyph i {
+  display: block; width: 1px; height: 1px; background: var(--ink-dim);
+  transition: height .5s ease, background .5s ease;
+}
+.ctl-listen[aria-pressed="true"] .ctl-glyph i { background: var(--ink); height: 9px; animation: ctl-sway 1.4s ease-in-out infinite; }
+.ctl-listen[aria-pressed="true"] .ctl-glyph i:nth-child(2) { height: 12px; animation-delay: -.45s; }
+.ctl-listen[aria-pressed="true"] .ctl-glyph i:nth-child(3) { animation-delay: -.9s; }
+@keyframes ctl-sway { 50% { transform: scaleY(.35); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ctl-listen[aria-pressed="true"] .ctl-glyph i { animation: none; }
+  .controls { transition: none; }
+}
+@media (hover: none) {
+  .controls { opacity: .7; }  /* touch screens never "wake" */
+}

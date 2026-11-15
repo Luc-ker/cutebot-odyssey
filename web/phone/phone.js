@@ -19,6 +19,58 @@ export const VIDEO_CONSTRAINTS = {
   },
 };
 
+// ---- always landscape -------------------------------------------------------------------------
+// The phone sits sideways on the robot. With rotation lock on (or Safari ignoring orientation.lock)
+// the browser stays portrait and the camera track arrives portrait, so the view would reach the eye
+// on its side. Frames are redrawn through a canvas, turned a quarter turn when they are portrait.
+// "Flipped" picks which way: off = the phone's top edge is on the left, on = on the right.
+
+/** Pure: degrees to turn a camera frame clockwise so it comes out landscape. Exported for tests. */
+export function landscapeTurn(width, height, flipped = false) {
+  if (!(width > 0 && height > width)) return 0; // already landscape: the OS rotated it for us
+  return flipped ? 90 : 270;
+}
+
+/** Pure: the canvas size for a width×height frame turned by `turn` degrees. Exported for tests. */
+export function turnedSize(width, height, turn) {
+  return turn % 180 ? { width: height, height: width } : { width, height };
+}
+
+/**
+ * Re-draw `source` through a canvas so the stream sent to the eye is always landscape.
+ * Falls back to `source` unchanged when the browser can't capture a canvas.
+ * @param {MediaStream} source
+ * @param {{doc?: Document, isFlipped?: () => boolean, fps?: number}} [o]
+ */
+export function landscapeStream(source, { doc = globalThis.document, isFlipped = () => false, fps = 30 } = {}) {
+  const canvas = doc?.createElement?.("canvas");
+  if (!canvas?.captureStream) return source;
+  // A video element that is in the page: iPhone Safari won't decode frames for a detached one.
+  const video = doc.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.setAttribute("playsinline", "");
+  video.style.cssText = "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none";
+  doc.body.append(video);
+  video.srcObject = source;
+  video.play().catch(() => {});
+
+  const ctx = canvas.getContext("2d");
+  const draw = () => {
+    const w = video.videoWidth;
+    const h = video.videoHeight;
+    if (!w || !h) return;
+    const turn = landscapeTurn(w, h, isFlipped());
+    const size = turnedSize(w, h, turn);
+    if (canvas.width !== size.width || canvas.height !== size.height) Object.assign(canvas, size);
+    ctx.setTransform(1, 0, 0, 1, size.width / 2, size.height / 2);
+    ctx.rotate((turn * Math.PI) / 180);
+    ctx.drawImage(video, -w / 2, -h / 2, w, h);
+  };
+  setInterval(draw, 1000 / fps);
+  return canvas.captureStream(fps);
+}
+
 const DISCONNECT_GRACE_MS = 3000; // "disconnected" often heals by itself
 const ANSWER_TIMEOUT_MS = 8000; // no answer: offer again (eye may have been off)
 
@@ -157,9 +209,24 @@ const LABELS = {
   error: "Error, retrying…",
 };
 
-// iPhone Safari may reject or omit orientation locking. Camera streaming must still start.
-async function preferLandscape() {
-  try { await globalThis.screen?.orientation?.lock?.("landscape"); } catch { /* use the rotation hint */ }
+// Android Chrome only locks orientation in fullscreen; iPhone Safari can't lock at all, and the
+// canvas turn above covers it. Camera streaming must start either way.
+async function preferLandscape(fullscreen = false) {
+  const doc = globalThis.document;
+  try {
+    if (fullscreen && !doc.fullscreenElement) await doc.documentElement.requestFullscreen?.({ navigationUI: "hide" });
+  } catch { /* not allowed here */ }
+  try { await globalThis.screen?.orientation?.lock?.("landscape"); } catch { /* canvas turn covers it */ }
+}
+
+const FLIP_KEY = "genrator.phone.flipped";
+
+function loadFlipped() {
+  try { return localStorage.getItem(FLIP_KEY) === "1"; } catch { return false; }
+}
+
+function saveFlipped(on) {
+  try { localStorage.setItem(FLIP_KEY, on ? "1" : "0"); } catch { /* remembered for this visit only */ }
 }
 
 async function keepAwake(statusEl) {
@@ -208,6 +275,15 @@ export async function main() {
     return;
   }
 
+  let flipped = loadFlipped();
+  const root = document.documentElement;
+  root.dataset.flipped = flipped ? "1" : "0";
+  $("flip").addEventListener("click", () => {
+    flipped = !flipped;
+    root.dataset.flipped = flipped ? "1" : "0";
+    saveFlipped(flipped);
+  });
+
   preferLandscape();
   showBattery($("battery")).catch(() => {});
 
@@ -219,7 +295,8 @@ export async function main() {
 
   const streamer = createPhoneStreamer({
     hub,
-    getStream: () => navigator.mediaDevices.getUserMedia(VIDEO_CONSTRAINTS),
+    getStream: async () => landscapeStream(await navigator.mediaDevices.getUserMedia(VIDEO_CONSTRAINTS),
+                                           { isFlipped: () => flipped }),
     onState: (s) => {
       indicator.textContent = LABELS[s] ?? s;
       indicator.dataset.state = s;
@@ -229,7 +306,7 @@ export async function main() {
   // Wake Lock needs a user gesture on some browsers; try now, and again on first tap.
   keepAwake($("wake"));
   document.addEventListener("click", () => {
-    preferLandscape();
+    preferLandscape(true);
     keepAwake($("wake"));
   }, { once: true });
 

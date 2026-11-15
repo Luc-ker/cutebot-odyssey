@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import collections
 import copy
 import inspect
 import logging
@@ -25,6 +26,11 @@ from server.world.worlds import WorldRegistry
 
 log = logging.getLogger(__name__)
 MIN_CHANGE_INTERVAL_S = 4.0
+# After a detected song change, wait until most of the clip sent to Gemini is the new song: a clip that
+# is half the old song gets a signature (and a world) that looks like the old one.
+SONG_SETTLE_S = 5.0
+IDLE_RETURN_S = 10.0  # this long without music (show running, listening on) brings back the Kingdom
+RECENT_FALLBACKS = 3  # built-in scenes used as a forced change are not reused until 3 others have been
 CURRENT_REPUBLISH_S = 5.0
 LOOP_SLEEP_S = 0.25
 
@@ -78,7 +84,18 @@ class WorldScheduler:
         self.current: dict | None = None
         self.previous_id: str | None = None
         self.silent = True
+        self.silent_since: float | None = None  # when the current stretch of silence began
         self.change_pending = False
+        self.changed_at = float("-inf")
+        # Show controls (eye page buttons, ``show.set``): a stopped show or "listen" off never changes
+        # the world from music. Listening needs a microphone, which stable mode never opens.
+        self.recent_fallbacks: collections.deque[str] = collections.deque(maxlen=RECENT_FALLBACKS)
+        # The music that produced the current scene (None at start or after a manual select): a timed
+        # check holds the scene while the music stays close to it.
+        self.music_for_current: dict | None = None
+        self.running = True
+        self.can_listen = audio_input is not None
+        self.listening = self.can_listen
         self.in_flight = False
         self.last_call = float("-inf")
         self.last_publish = float("-inf")
@@ -87,33 +104,73 @@ class WorldScheduler:
             self.world_registry.add(copy.deepcopy(fallback), fallback=True)
 
     async def start(self) -> None:
-        """Adopt the kingdom fallback immediately so the demo always has a world."""
-        fallback = self.world_registry.get_by_name("kingdom")
+        """Adopt the starting fallback immediately so the demo always has a world.
+
+        That is Kingdom, or the ``STABLE_WORLD`` world when stable mode locks the run to it."""
+        key = stable.world_key(self.config) if self.stable else stable.DEFAULT_WORLD
+        fallback = self.world_registry.get_by_name(key)
         if fallback is None:
-            raise RuntimeError("The required kingdom fallback world is missing")
+            raise RuntimeError(f"The required {key} fallback world is missing")
         await self._adopt(fallback, returning=False)
 
     def on_audio_features(self, data: dict) -> None:
-        self.silent = bool(data.get("silent", False))
+        silent = bool(data.get("silent", False))
+        if silent and not self.silent:
+            self.silent_since = self.clock()
+        elif not silent:
+            self.silent_since = None
+        self.silent = silent
 
     def on_vision_state(self, data: dict, now: float | None = None) -> None:
         self.object_registry.update(data, self.clock() if now is None else now)
 
+    def show_state(self) -> dict:
+        return {"running": self.running, "listening": self.listening, "can_listen": self.can_listen}
+
+    async def set_show(self, data: dict) -> None:
+        """``show.set {running?, listening?}`` from an eye page button; answers with ``show.state``."""
+        if isinstance(data.get("running"), bool):
+            self.running = data["running"]
+        if isinstance(data.get("listening"), bool):
+            self.listening = data["listening"] and self.can_listen
+        if not (self.running and self.listening):
+            self.change_pending = False  # a song heard while paused is not a reason to change later
+        await self.hub.pub("show.state", self.show_state())
+
     def mark_changed(self) -> None:
+        """The change detector heard a new song: compose a new world for it once it has settled."""
         self.change_pending = True
+        self.changed_at = self.clock()
 
     async def tick(self, now: float | None = None) -> None:
         now = self.clock() if now is None else now
         if self.current and now - self.last_publish >= CURRENT_REPUBLISH_S:
             await self._publish_current()
+            await self.hub.pub("show.state", self.show_state())  # pages opened mid-run catch up
             self.last_publish = now
+        if not (self.running and self.listening):
+            self.change_pending = False
+            return
+        if await self._return_to_kingdom_when_idle(now):
+            return
+        if self.change_pending and now - self.changed_at < SONG_SETTLE_S:
+            return  # a new song just started: let the clip fill with it before asking
         due_interval = now - self.last_call >= float(self.config.get("GEMINI_INTERVAL_S", 8.0))
         due_change = self.change_pending and now - self.last_call >= MIN_CHANGE_INTERVAL_S
         if (due_interval or due_change) and not self.silent and not self.in_flight:
+            song_change = self.change_pending
             self.change_pending = False
-            await self.request_world(now)
+            await self.request_world(now, song_change=song_change)
 
-    async def request_world(self, now: float | None = None) -> bool:
+    async def request_world(self, now: float | None = None, *, song_change: bool = False) -> bool:
+        """Change the world for the music playing now.
+
+        ``song_change`` is True when the change detector heard a new song. A timed check during the same
+        song first compares the music with the current world's song on the laptop and, when it is
+        close, keeps the world without calling Gemini at all. Past that point the scene always
+        changes: to a world this song had before, to Gemini's new world, or, when Gemini fails or comes
+        back with the current setting, to one of the 8 built-in scenes.
+        """
         now = self.clock() if now is None else now
         if self.silent or self.in_flight or now - self.last_call < MIN_CHANGE_INTERVAL_S:
             self.change_pending = True
@@ -127,56 +184,126 @@ class WorldScheduler:
                 return False
             sample_window = self.audio_input.last(seconds)
             music_signature = self.signature_fn(sample_window, self.audio_input.rate)
+            # Kingdom at start (no music yet) never holds: the first song always changes the scene.
+            if not song_change and self.current and self.music_for_current:
+                d = self.distance_fn(music_signature, self.music_for_current)
+                threshold = float(self.config.get("WORLD_CHANGE_THRESHOLD", 0.35))
+                log.info("timed music check: distance %.3f vs threshold %.2f -> %s",
+                         d, threshold, "same song, keep" if d <= threshold else "new music, change")
+                if d <= threshold:
+                    return False  # same song still playing: keep the world quietly, no Gemini call
+            elif song_change:
+                log.info("song change detected: forcing a new scene")
+
+            # A song heard earlier this session brings its world back without asking Gemini.
             match = self.world_registry.match(music_signature)
             if match and self.current and match.get("id") != self.current.get("id"):
                 await self._adopt(match, returning=True)
+                self.music_for_current = music_signature
+                await self._publish_composing("done", match)
                 return True
 
-            image_jpeg = self.snapshot_fetcher(self.config)
-            if inspect.isawaitable(image_jpeg):
-                image_jpeg = await image_jpeg
-            objects = [_object_dict(obj) for obj in self.object_registry.all()]
-            # A bundled fallback has never been composed from this session's music.
-            # Its example signature/setting must not suppress the first real result.
-            current_is_fallback = bool(self.current and self.world_registry.is_fallback(self.current.get("id")))
-            raw = await self.compose(audio_wav, image_jpeg, objects,
-                                     None if current_is_fallback else self.current)
-            guarded = self.guard(raw, objects, self.vocab)
-            if inspect.isawaitable(guarded):
-                guarded = await guarded
-            if guarded is None:
-                raise ValueError("Gemini response failed world validation")
-            guarded["music_signature"] = music_signature
-            if self.current and not current_is_fallback:
-                current_signature = self.current.get("music_signature")
-                setting = (guarded.get("world") or {}).get("setting", "").casefold()
-                current_setting = (self.current.get("world") or {}).get("setting", "").casefold()
-                if (not current_signature or self.distance_fn(music_signature, current_signature) <=
-                        float(self.config.get("WORLD_CHANGE_THRESHOLD", 0.35)) or setting == current_setting):
+            # The eye page shows "rendering new scene" from here until done/failed.
+            await self._publish_composing("composing")
+            try:
+                world = await self._compose_new(audio_wav, music_signature)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                log.warning("world composition failed (%s); switching to a built-in scene", exc)
+                await self._publish_health(False, str(exc))
+                world = None
+            if not (self.running and self.listening):
+                return False  # listening was turned off (or the show stopped) while Gemini worked
+            if world is None:
+                world = self._pick_fallback(music_signature)
+                if world is None:
+                    await self._publish_composing("failed", self.current)
                     return False
-            guarded.pop("id", None)
-            world = self.world_registry.add(guarded)
+                self.recent_fallbacks.append(world["id"])
             await self._adopt(world, returning=False)
-            await self._publish_health(True, "world composition succeeded")
+            self.music_for_current = music_signature
+            await self._publish_composing("done", world)
             return True
         except asyncio.CancelledError:
             raise
-        except Exception as exc:
-            log.exception("world composition failed; keeping current world")
-            await self._publish_health(False, str(exc))
+        except Exception:
+            log.exception("music check failed; keeping current world")
             return False
         finally:
             self.in_flight = False
+
+    async def _return_to_kingdom_when_idle(self, now: float) -> bool:
+        """No song for IDLE_RETURN_S: the scene goes back to the Kingdom until music starts again."""
+        if (not self.silent or self.silent_since is None or self.in_flight
+                or now - self.silent_since < float(self.config.get("IDLE_RETURN_S", IDLE_RETURN_S))):
+            return False
+        kingdom = self.world_registry.get_by_name(stable.DEFAULT_WORLD)
+        if kingdom is None or (self.current or {}).get("id") == kingdom.get("id"):
+            return False
+        log.info("no music for %.0f s: back to the Kingdom", now - self.silent_since)
+        await self._adopt(kingdom, returning=False)
+        self.music_for_current = None  # the next song always changes it
+        await self._publish_composing("done", kingdom)
+        return True
+
+    async def _compose_new(self, audio_wav: bytes, music_signature: dict) -> dict | None:
+        """Gemini's world for this music, registered, or None when it is no change from now."""
+        image_jpeg = self.snapshot_fetcher(self.config)
+        if inspect.isawaitable(image_jpeg):
+            image_jpeg = await image_jpeg
+        objects = [_object_dict(obj) for obj in self.object_registry.all()]
+        # No current world goes to Gemini: the compose prompt tells it to keep the current world when
+        # unsure, and here the music has already changed.
+        raw = await self.compose(audio_wav, image_jpeg, objects, None)
+        guarded = self.guard(raw, objects, self.vocab)
+        if inspect.isawaitable(guarded):
+            guarded = await guarded
+        if guarded is None:
+            raise ValueError("Gemini response failed world validation")
+        setting = (guarded.get("world") or {}).get("setting", "").casefold()
+        current_setting = ((self.current or {}).get("world") or {}).get("setting", "").casefold()
+        current_is_built_in = bool(self.current and self.world_registry.is_fallback(self.current.get("id")))
+        # The starting Kingdom was never made from music, so a Gemini kingdom still counts as new.
+        if self.current and not current_is_built_in and setting == current_setting:
+            log.info("Gemini returned the current setting (%s); using a built-in scene instead", setting)
+            return None
+        guarded["music_signature"] = music_signature
+        guarded.pop("id", None)
+        world = self.world_registry.add(guarded)
+        await self._publish_health(True, "world composition succeeded")
+        return world
+
+    def _pick_fallback(self, music_signature: dict) -> dict | None:
+        """The built-in scene closest to this music, never the current one or a recently used one."""
+        current_id = (self.current or {}).get("id")
+        built_in = [w for w in self.world_registry.all()
+                    if self.world_registry.is_fallback(w.get("id")) and w.get("id") != current_id]
+        fresh = [w for w in built_in if w.get("id") not in self.recent_fallbacks] or built_in
+        if not fresh:
+            return None
+
+        def closeness(w: dict) -> float:
+            sig = w.get("music_signature")
+            try:
+                return self.distance_fn(music_signature, sig) if sig else 1.0
+            except Exception:
+                return 1.0
+        return min(fresh, key=closeness)
 
     async def select(self, name: str) -> bool:
         world = self.world_registry.get_by_name(name)
         if world is None or not self.world_registry.is_fallback(world.get("id")):
             return False
         await self._adopt(world, returning=False)
+        self.music_for_current = None  # picked by hand: the next music changes it
         return True
 
     async def reset(self) -> None:
         self.current = None
+        self.silent_since = None
+        self.music_for_current = None
+        self.recent_fallbacks.clear()
         self.previous_id = None
         self.last_call = float("-inf")
         self.last_publish = float("-inf")
@@ -219,6 +346,14 @@ class WorldScheduler:
         if self.current:
             await self.hub.pub("world.current", {"world": self.current, "previous_id": self.previous_id})
 
+    async def _publish_composing(self, state: str, world: dict | None = None) -> None:
+        """``world.composing`` (C3): music-driven composition progress, for the eye page HUD."""
+        data = {"state": state}
+        name = ((world or {}).get("world") or {}).get("name")
+        if name and state != "composing":
+            data["name"] = name
+        await self.hub.pub("world.composing", data)
+
     async def _publish_health(self, ok: bool, detail: str) -> None:
         await self.hub.pub("system.health", {"service": "gemini", "ok": ok, "detail": detail[:160]})
         if not ok:
@@ -250,7 +385,7 @@ async def run(hub, config: dict | None = None) -> None:
 
     async def on_world_select(env: dict):
         if stable_kingdom:
-            return  # the Kingdom stays locked; no world switches mid-demo
+            return  # the stable world stays locked; no world switches mid-demo
         await scheduler.select(str((env.get("data") or {}).get("name", "")))
 
     async def on_reset(_env: dict):
@@ -262,6 +397,7 @@ async def run(hub, config: dict | None = None) -> None:
         hub.sub("audio.features", lambda env: with_data(env, scheduler.on_audio_features))
     hub.sub("vision.state", lambda env: with_data(env, scheduler.on_vision_state))
     hub.sub("world.select", on_world_select)
+    hub.sub("show.set", lambda env: scheduler.set_show(env.get("data") or {}))
     hub.sub("system.reset", on_reset)
 
     loop = asyncio.get_running_loop()

@@ -10,7 +10,7 @@ SAMPLES = DOC["_samples"]
 
 C3_TOPICS = """vision.state camera.frame robot.telemetry robot.cmd gamepad.button audio.beat audio.features world.current
 world.transition world.objects robot.state world.event narration.say narration.speak narration.done sfx.play
-video.prompt video.status webrtc.signal system.health system.reset world.select""".split()
+video.prompt video.status webrtc.signal system.health system.reset world.select world.composing show.set show.state""".split()
 
 
 def test_every_c3_topic_has_a_schema_and_a_sample():

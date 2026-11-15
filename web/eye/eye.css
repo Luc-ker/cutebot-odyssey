@@ -1,4 +1,19 @@
 /* Robot's-eye display page (T31). */
+
+/* Type and ink shared by every overlay on this page (HUD, fallback, giant, status captions). */
+:root {
+  --f-mincho: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  --f-gothic: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif;
+  --ink: #f2efe9;                        /* paper white, never pure #fff over video */
+  --ink-dim: rgba(242, 239, 233, .66);
+  --hairline: rgba(242, 239, 233, .42);
+  --ink-shadow: 0 0 12px rgba(6, 6, 8, .55), 0 1px 1px rgba(6, 6, 8, .45);
+  --veil: rgba(8, 8, 10, .34);
+  --seal: #c9b48a;                       /* default seal when a scene has no palette yet */
+  --shu: #c8553d;                        /* errors only */
+  --edge-x: clamp(16px, 3vw, 40px);
+  --edge-y: clamp(16px, 3.2vh, 36px);
+}
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
 
 .stage { position: fixed; inset: 0; background: #000; }
@@ -18,31 +33,31 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
 
 #waiting {
   position: absolute; inset: 0; display: grid; place-items: center;
-  font: 600 clamp(18px, 3vw, 40px) system-ui, sans-serif; color: #bbb;
-  letter-spacing: .04em;
+  font: 400 clamp(16px, 2.2vw, 28px) var(--f-mincho); color: var(--ink-dim);
+  letter-spacing: .3em;
   animation: eye-breathe 2.4s ease-in-out infinite;
 }
 #waiting[hidden], #conn[hidden] { display: none; }
 @keyframes eye-breathe { 50% { opacity: .45; } }
 
-#conn {
-  position: absolute; bottom: 12px; left: 12px;
-  padding: .3em .7em; border-radius: .3em;
-  font: 600 14px system-ui, sans-serif; color: #fff; background: #a3212b;
+/* Bottom-left captions: hub offline (above) and the renderer's state. Small, light, no boxes. */
+#conn, #renderer {
+  position: absolute; left: var(--edge-x);
+  font: 300 clamp(10px, .95vw, 13px) var(--f-gothic); letter-spacing: .22em;
+  color: var(--ink-dim); text-shadow: var(--ink-shadow);
+}
+#conn { bottom: calc(var(--edge-y) + 1.9em); color: var(--ink); }
+#conn::before {
+  content: ""; display: inline-block; width: 6px; height: 6px; margin-right: .8em;
+  vertical-align: middle; background: var(--shu);
 }
 
-#help {
-  position: absolute; bottom: 12px; right: 12px;
-  font: 12px system-ui, sans-serif; color: rgba(255, 255, 255, .5);
-  opacity: 0; transition: opacity .4s ease;
-}
-#renderer {
-  position: absolute; top: 12px; right: 12px; max-width: 60%;
-  padding: .3em .7em; border-radius: .3em;
-  font: 500 13px system-ui, sans-serif; color: #fff; background: #222b;
-}
+#renderer { bottom: var(--edge-y); max-width: 50%; }
 #renderer:empty { display: none; }
-body:hover #help { opacity: 1; }
+/* A stopped show: the plain camera, dimmed and quiet; no fallback overlay, no music line. */
+.stage[data-show="stopped"] video { filter: brightness(.5) saturate(.55); transition: filter 1.2s ease; }
+.stage[data-show="stopped"] #slot-fallback { display: none; }
+.stage[data-listening="off"] .hud-music { opacity: 0 !important; }
 
 @media (prefers-reduced-motion: reduce) {
   #waiting { animation: none; }

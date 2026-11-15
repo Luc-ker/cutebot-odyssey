@@ -20,28 +20,26 @@
 }
 
 .fb-badge {
-  position: absolute; top: clamp(12px, 3vh, 32px); right: clamp(48px, 7vw, 96px);
-  padding: .25em .7em; border-radius: .3em;
-  font: 600 clamp(11px, 1.2vw, 16px) system-ui, sans-serif; letter-spacing: .03em;
-  color: #fff; background: rgba(0, 0, 0, .55);
+  /* Bottom right, clear of the music line and beat ring at the top right. */
+  position: absolute; bottom: calc(var(--edge-y) + 48px); right: var(--edge-x); /* above the show controls */
+  font: 300 clamp(10px, 1vw, 13px) var(--f-gothic); letter-spacing: .24em;
+  color: var(--ink-dim); text-shadow: var(--ink-shadow);
 }
 
 .fb-label {
   position: absolute; left: 50%; bottom: clamp(70px, 14vh, 160px);
   transform: translateX(-50%);
   max-width: 86vw; text-align: center;
-  padding: .25em .8em;
-  font: 700 clamp(26px, 5vw, 72px) "Cinzel", "Palatino Linotype", Palatino, Georgia, serif;
-  color: #fff;
-  background: rgba(0, 0, 0, .5);
-  border-bottom: 5px solid var(--fb-c3);
-  border-radius: .2em;
-  text-shadow: 0 2px 4px #000, 0 0 18px rgba(0, 0, 0, .8);
+  padding-bottom: .35em;
+  font: 500 clamp(24px, 4.2vw, 60px) var(--f-mincho); letter-spacing: .14em;
+  color: var(--ink);
+  border-bottom: 1px solid var(--fb-c3);
+  text-shadow: var(--ink-shadow);
   opacity: 0; transition: opacity .4s ease;
 }
 .fb-label.visible { opacity: 1; }
-.fb-label[data-behaviour="threat"] { border-bottom-color: #e0303a; }
-.fb-label[data-behaviour="friendly"] { border-bottom-color: #4fd17a; }
+.fb-label[data-behaviour="threat"] { border-bottom-color: var(--shu); }
+.fb-label[data-behaviour="friendly"] { border-bottom-color: #8fb39a; }
 
 /* The big label replaces the HUD's small "Ahead:" line while the fallback is up. */
 .stage:has(.fallback.active) .hud-ahead { opacity: 0 !important; }

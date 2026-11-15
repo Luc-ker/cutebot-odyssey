@@ -1,55 +1,112 @@
-/* Robot's-eye HUD (T32). Readable on both bright and dark video: dark translucent backing plus a
-   text shadow on every label. */
+/* Robot's-eye HUD (T32). Quiet, Japanese-inspired type over live video: no boxes or pills, only ink
+   on the image with a soft shadow for legibility. The scene name runs down the left edge like the
+   spine of a scroll, under a small seal in the scene's colour. Tokens live in eye.css (:root). */
 .hud {
   position: absolute; inset: 0; pointer-events: none;
-  font-family: "Cinzel", "Palatino Linotype", Palatino, Georgia, serif;
-  color: #fff;
+  color: var(--ink);
+  font-family: var(--f-gothic);
+  text-shadow: var(--ink-shadow);
 }
+/* A faint veil behind the left edge so the vertical name reads on bright frames. */
+.hud::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: clamp(64px, 12vw, 180px);
+  background: linear-gradient(90deg, var(--veil), transparent);
+  opacity: 0; transition: opacity 1.2s ease;
+}
+.hud:has(.hud-world.visible)::before { opacity: 1; }
 
+/* Scene name: vertical, mincho, wide tracking. */
 .hud-world {
-  position: absolute; top: clamp(12px, 3vh, 32px); left: clamp(12px, 3vw, 40px);
-  max-width: 60vw;
-  padding: .3em .75em .35em;
-  font-size: clamp(18px, 3.2vw, 44px); font-weight: 700; letter-spacing: .04em;
-  color: var(--hud-accent, #f4e2b0);
-  background: linear-gradient(90deg,
-    color-mix(in srgb, var(--hud-from, #000) 35%, rgba(0, 0, 0, .55)),
-    rgba(0, 0, 0, .25));
-  border-left: 4px solid var(--hud-to, var(--hud-accent, #f4e2b0));
-  border-radius: .25em;
-  text-shadow: 0 1px 2px #000, 0 0 10px rgba(0, 0, 0, .8);
-  opacity: 0; transition: opacity .6s ease, color 1.2s ease;
+  position: absolute; top: var(--edge-y); left: var(--edge-x);
+  max-height: 64vh; overflow: hidden; padding-top: 24px; /* room for the seal inside the clip */
+  writing-mode: vertical-rl; text-orientation: mixed;
+  font-family: var(--f-mincho); font-weight: 500;
+  font-size: clamp(18px, 2.4vw, 34px); letter-spacing: .22em; line-height: 1;
+  white-space: nowrap;
+  opacity: 0; transform: translateY(-6px);
+  transition: opacity 1.2s ease, transform 1.2s ease;
 }
-.hud-world.visible { opacity: 1; }
+.hud-world.visible { opacity: 1; transform: none; }
+/* Seal above the name, in the scene's accent colour. */
+.hud-world::before {
+  content: ""; position: absolute; top: 0; left: 50%;
+  width: 9px; height: 9px; margin-left: -4.5px;
+  background: var(--hud-accent, var(--seal));
+  box-shadow: none;
+  transition: background 1.2s ease;
+}
 
+/* Ahead: a small caption at the foot of the frame. */
 .hud-ahead {
-  position: absolute; bottom: clamp(16px, 6vh, 64px); left: 50%;
-  transform: translate(-50%, 8px);
-  max-width: 80vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  padding: .35em .9em;
-  font-size: clamp(16px, 2.4vw, 34px); font-weight: 600;
-  background: rgba(0, 0, 0, .55);
-  border-radius: 999px;
-  text-shadow: 0 1px 2px #000;
-  opacity: 0; transition: opacity .5s ease, transform .5s ease;
+  position: absolute; bottom: clamp(18px, 6vh, 56px); left: 50%;
+  transform: translate(-50%, 6px);
+  display: flex; align-items: baseline; gap: .9em;
+  max-width: 80vw; white-space: nowrap;
+  opacity: 0; transition: opacity .6s ease, transform .6s ease;
 }
 .hud-ahead.visible { opacity: 1; transform: translate(-50%, 0); }
-
-.hud-beat {
-  position: absolute; top: clamp(14px, 3vh, 34px); right: clamp(14px, 3vw, 40px);
-  width: 18px; height: 18px; border-radius: 50%;
-  background: var(--hud-accent, #ffd36b);
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, .55);
-  opacity: .45;
+.hud-ahead-label, .hud-ahead-role {
+  font-weight: 300; font-size: clamp(10px, 1vw, 13px); letter-spacing: .32em; text-transform: lowercase;
+  color: var(--ink-dim);
 }
-.hud-beat.pop { animation: hud-pop .16s ease-out; }
+.hud-ahead-label::after {
+  content: ""; display: inline-block; width: 1.6em; height: 1px; margin-left: .9em;
+  vertical-align: middle; background: var(--hairline);
+}
+.hud-ahead-name {
+  font-family: var(--f-mincho); font-weight: 500;
+  font-size: clamp(16px, 1.9vw, 26px); letter-spacing: .1em;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.hud-ahead-role:empty { display: none; }
+
+/* Beat: a small open ring that fills for an instant on each beat. */
+.hud-beat {
+  position: absolute; top: var(--edge-y); right: var(--edge-x);
+  width: 9px; height: 9px; border-radius: 50%;
+  border: 1px solid var(--ink-dim);
+  box-sizing: border-box;
+}
+.hud-beat.pop { animation: hud-pop .18s ease-out; }
 @keyframes hud-pop {
-  0% { transform: scale(calc(1 + var(--beat-strength, 1) * .9)); opacity: 1;
-       box-shadow: 0 0 0 2px rgba(0, 0, 0, .55), 0 0 18px var(--hud-accent, #ffd36b); }
-  100% { transform: scale(1); opacity: .45; }
+  0% { background: var(--ink); border-color: var(--ink);
+       transform: scale(calc(1 + var(--beat-strength, 1) * .5)); }
+  100% { background: transparent; transform: scale(1); }
+}
+
+/* Music line, top right beside the beat ring: song heard -> rendering -> outcome.
+   A short hairline leads the text; while rendering, a brighter stroke travels along it. */
+.hud-music {
+  position: absolute; top: calc(var(--edge-y) - .45em); right: calc(var(--edge-x) + 9px + 16px);
+  max-width: 40vw; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  padding-left: calc(2.4em + .9em);
+  font-weight: 300; font-size: clamp(11px, 1.05vw, 14px); letter-spacing: .24em; line-height: 1.8;
+  color: var(--ink-dim);
+  opacity: 0; transition: opacity .6s ease, color .6s ease;
+}
+.hud-music.visible { opacity: 1; }
+.hud-music::before {
+  content: ""; position: absolute; left: 0; top: 50%; width: 2.4em; height: 1px;
+  background: var(--hairline);
+}
+.hud-music.composing { color: var(--ink); }
+.hud-music.composing::after {
+  content: ""; position: absolute; left: 0; top: 50%; width: .8em; height: 1px;
+  background: var(--ink);
+  animation: hud-music-stroke 1.6s cubic-bezier(.6, 0, .4, 1) infinite;
+}
+.hud-music.done { color: var(--ink); font-family: var(--f-mincho); font-weight: 500; letter-spacing: .14em; }
+.hud-music.done::before { background: var(--hud-accent, var(--seal)); height: 2px; margin-top: -.5px; }
+.hud-music.failed::before { background: var(--shu); }
+@keyframes hud-music-stroke {
+  0% { transform: translateX(0); opacity: 0; }
+  20%, 80% { opacity: 1; }
+  100% { transform: translateX(2em); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hud-beat.pop { animation-duration: .08s; }
-  .hud-ahead { transition: opacity .3s ease; transform: translate(-50%, 0); }
+  .hud-music.composing::after { animation: none; opacity: 1; width: 2.4em; }
+  .hud-world, .hud-world.visible { transition: opacity .4s ease; transform: none; }
+  .hud-ahead, .hud-ahead.visible { transition: opacity .4s ease; transform: translate(-50%, 0); }
 }

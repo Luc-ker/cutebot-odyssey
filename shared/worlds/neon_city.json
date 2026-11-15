@@ -4,6 +4,7 @@
   "roles": [],
   "terrain": {"open_space": "a glowing city square", "under_table": "the subway tunnels"},
   "restyle_prompt": "First-person, low through a rain-slick neon city street, pink and blue signs ripple in puddles beneath towering glass buildings, cinematic fantasy.",
+  "stable_prompt": "Transform the entire view into a rain-soaked neon city at night from a cinematic cyberpunk film, seen through a handheld camera walking through it. Everything in view becomes part of the city in the same place and size: tall shapes become skyscrapers wrapped in glowing signs, wide or boxy shapes become street stalls and shopfronts, thin legs and poles become neon street lamps, flat surfaces become wet streets with puddle reflections, dark gaps become glowing alleyways and tunnels. The output will show neon pink, neon blue and cyber yellow light in light rain with drifting steam, and a solid 3D world whose view pans and turns with every camera movement while the buildings stay anchored, with nothing ordinary left.",
   "narration": "The city hums awake beneath the neon.",
   "music_signature": {"tempo_bpm": 118, "energy": 0.78, "brightness": 0.86, "chroma": [0.05, 0.15, 0.05, 0.1, 0.05, 0.15, 0.05, 0.1, 0.05, 0.15, 0.05, 0.05]}
 }

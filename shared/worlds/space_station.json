@@ -4,6 +4,7 @@
   "roles": [],
   "terrain": {"open_space": "a star-filled docking bay", "under_table": "the humming engine room"},
   "restyle_prompt": "First-person, low along a space station deck, cyan beacons guide the way as planets shine beyond a wide observation window, cinematic fantasy.",
+  "stable_prompt": "Transform the entire view into an orbital space station from a cinematic science fiction film, seen through a handheld camera walking through it. Everything in view becomes part of the station in the same place and size: tall shapes become chrome antenna towers, wide or boxy shapes become cargo modules and consoles, thin legs and poles become glowing conduits, flat surfaces become deck plating with cyan guide lights, dark gaps become glowing airlocks. The output will show chrome and midnight blue panels in soft solar haze, a planet beyond a wide observation window, and a solid 3D world whose view pans and turns with every camera movement while the modules stay anchored, with nothing ordinary left.",
   "narration": "Stars gather beyond the station windows.",
   "music_signature": {"tempo_bpm": 92, "energy": 0.34, "brightness": 0.7, "chroma": [0.1, 0.05, 0.05, 0.15, 0.05, 0.1, 0.05, 0.15, 0.05, 0.05, 0.15, 0.05]}
 }

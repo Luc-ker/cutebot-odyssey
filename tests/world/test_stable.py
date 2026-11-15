@@ -1,6 +1,7 @@
 """Stable Kingdom demo mode: one prompt, settled objects, per-class roles, no giants."""
 import asyncio
 import json
+import re
 
 from server.common.config import load_config
 from server.world import giants, prompt_blend, stable
@@ -158,3 +159,42 @@ def test_renderer_config_exposes_effective_stable_settings(monkeypatch):
     assert not any("KEY" in k for k in cfg)
     monkeypatch.delenv("GENRATOR_DECART_MODEL", raising=False)
     assert renderer_config()["DECART_MODEL"] == "lucy-restyle-2"
+
+
+def test_every_fallback_world_has_a_kingdom_style_stable_prompt():
+    from server.world.fallback_worlds import FALLBACK_WORLD_ORDER, load_fallback_worlds
+
+    worlds = {w["key"]: w for w in load_fallback_worlds()}
+    assert set(worlds) == set(FALLBACK_WORLD_ORDER)
+    for key, world in worlds.items():
+        text = world["stable_prompt"]
+        assert len(text) <= stable.MAX_CHARS, key
+        assert text.startswith("Transform the entire view into"), key
+        for phrase in ("handheld camera", "in the same place and size", "tall shapes become",
+                       "flat surfaces become", "dark gaps become", "the output will show",
+                       "solid 3d world", "camera movement", "stay anchored"):
+            assert phrase in text.lower(), (key, phrase)
+        for word in ("bottle", "laptop", "desk", "table", "chair", "cup", "person", "hand"):
+            assert word not in re.findall(r"[a-z]+", text.lower()), (key, word)
+
+
+def test_stable_world_picks_that_worlds_prompt_and_override_still_wins():
+    neon = {"STABLE_KINGDOM_ENABLED": True, "STABLE_WORLD": "Neon City"}
+    assert stable.world_key(neon) == "neon_city"
+    assert stable.world_name(neon) == "Neon City"
+    assert "neon city" in stable.prompt(neon).lower()
+    assert stable.prompt({**neon, "STABLE_KINGDOM_PROMPT": "override"}) == "override"
+    assert stable.world_key({}) == "kingdom"
+    assert stable.prompt({"STABLE_WORLD": "nowhere"}) == stable.DEFAULT_PROMPT
+
+
+def test_scheduler_starts_in_and_stays_on_the_stable_world():
+    from server.gemini.scheduler import WorldScheduler
+
+    async def main():
+        hub = FakeHub()
+        sched = WorldScheduler(hub, {**STABLE, "STABLE_WORLD": "space_station"}, vocab=[])
+        await sched.start()
+        current = [d for t, d in hub.published if t == "world.current"][-1]["world"]
+        assert current["world"]["name"] == "Space Station"
+    asyncio.run(main())

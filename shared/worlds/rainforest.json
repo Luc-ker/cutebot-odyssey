@@ -4,6 +4,7 @@
   "roles": [],
   "terrain": {"open_space": "a fern-covered clearing", "under_table": "a hidden vine-wrapped ruin"},
   "restyle_prompt": "First-person, low among rainforest roots and ferns, warm rain beads on leaves while an ancient temple rises through mist, painterly fantasy.",
+  "stable_prompt": "Transform the entire view into a deep rainforest from a cinematic jungle film, seen through a handheld camera walking through it. Everything in view becomes part of the rainforest in the same place and size: tall shapes become giant trees wrapped in vines, wide or boxy shapes become moss-covered ancient temple ruins, thin legs and poles become bamboo and hanging lianas, flat surfaces become fern-covered forest floor, dark gaps become shadowy hollows with glowing fungi. The output will show jungle green leaves in warm afternoon rain with amber light through the canopy, a temple rising through mist, and a solid 3D world whose view pans and turns with every camera movement while the trees and ruins stay anchored, with nothing modern.",
   "narration": "The green canopy parts to reveal an ancient path.",
   "music_signature": {"tempo_bpm": 98, "energy": 0.68, "brightness": 0.54, "chroma": [0.1, 0.05, 0.15, 0.05, 0.1, 0.05, 0.1, 0.05, 0.15, 0.05, 0.1, 0.05]}
 }

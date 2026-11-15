@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Genrator · Robot's eye</title>
+  <!-- Display faces; the Hiragino / Yu fallbacks in eye.css cover offline runs. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&family=Zen+Kaku+Gothic+New:wght@300;400&display=swap">
   <link rel="stylesheet" href="./eye.css">
 </head>
 <body>
@@ -13,12 +17,10 @@
     <!-- Optional overlay modules mount into these slots; a missing one only logs a warning. -->
     <div class="slot" id="slot-pulse"></div>
     <div class="slot" id="slot-fallback"></div>
-    <div class="slot" id="slot-giant"></div>
     <div class="slot" id="slot-hud"></div>
     <div id="waiting">Waiting for the robot's eye…</div>
     <div id="conn" hidden>Hub offline</div>
     <div id="renderer" role="status"></div>
-    <div id="help">F fullscreen · R raw camera</div>
   </div>
   <script type="module" src="./eye.js"></script>
 </body>

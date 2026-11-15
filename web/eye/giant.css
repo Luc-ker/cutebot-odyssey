@@ -19,18 +19,6 @@
   100% { transform: translateY(0); opacity: 1; }
 }
 
-.giant-caption {
-  position: absolute; top: 18%; left: 50%;
-  transform: translate(-50%, -12px);
-  max-width: 88vw; text-align: center;
-  font: 700 clamp(22px, 4vw, 58px) "Cinzel", "Palatino Linotype", Palatino, Georgia, serif;
-  letter-spacing: .03em;
-  color: #fff3d6;
-  text-shadow: 0 2px 6px #000, 0 0 24px rgba(0, 0, 0, .9);
-  opacity: 0;
-  transition: opacity .6s ease, transform .6s ease;
-}
-.giant-caption.visible { opacity: 1; transform: translate(-50%, 0); }
 
 /* Applied to the eye page's .stage, so the whole view shakes. */
 .giant-shake { animation: giant-shake .6s cubic-bezier(.36, .07, .19, .97) both; }
@@ -43,6 +31,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .giant-shadow.sweep { animation: none; }
-  .giant-shadow, .giant-caption { transition-duration: .3s; }
+  .giant-shadow { transition-duration: .3s; }
   .giant-shake { animation: none; }
 }

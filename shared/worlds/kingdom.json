@@ -4,6 +4,7 @@
   "roles": [],
   "terrain": {"open_space": "a green meadow", "under_table": "a dragon's cave"},
   "restyle_prompt": "First-person, low through a sunlit kingdom meadow toward distant stone towers, banners stir in a clear morning breeze, painterly fantasy.",
+  "stable_prompt": "Transform the entire view into an enchanted fairy-tale kingdom from a cinematic fantasy film, seen through a handheld camera walking through it. Everything in view becomes part of the kingdom in the same place and size: tall shapes become slender watchtowers with pointed blue spires and banners, wide or boxy shapes become ivy-covered castle fortress walls, thin legs and poles become gnarled trees, flat surfaces become flower meadows and cobblestone paths, dark gaps become glowing caves. The output will show weathered stone, moss and wildflowers in golden light with soft mist, a castle on a far hill, and a solid 3D world whose view pans and turns with every camera movement while the buildings stay anchored, with nothing modern.",
   "narration": "A new morning dawns over the kingdom.",
   "music_signature": {"tempo_bpm": 104, "energy": 0.46, "brightness": 0.68, "chroma": [0.15, 0.05, 0.1, 0.05, 0.15, 0.05, 0.05, 0.1, 0.05, 0.15, 0.05, 0.05]}
 }

@@ -101,7 +101,14 @@ def compose(world: dict | None, facing_role: str | None, giant_present: bool,
 
     The world's base prompt is the part that gets shortened when the 400-character cap bites,
     so the facing object, the giant and the consistency tail always survive.
+
+    A built-in scene with a ``stable_prompt`` (Kingdom at start, before any song) is sent as that
+    full scene prompt instead, with no object or giant phrases: it already says how everything in
+    view becomes part of the scene.
     """
+    fixed = ((world or {}).get("stable_prompt") or "").strip()
+    if fixed:
+        return fixed[:stable.MAX_CHARS]
     base = ((world or {}).get("restyle_prompt") or "").strip()
     extras = [p for p in (role_phrase(facing_role, vocab),
                           giant_phrase(world) if giant_present else None) if p]

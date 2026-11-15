@@ -68,7 +68,7 @@ def test_adopts_different_world_but_holds_similar_response():
     assert len([message for message in hub.messages if message[0] == "world.current"]) == 2
 
 
-def test_timeout_keeps_current_world():
+def test_timeout_switches_to_a_built_in_scene():
     async def compose(*_args):
         raise TimeoutError("slow")
 
@@ -77,10 +77,11 @@ def test_timeout_keeps_current_world():
         await scheduler.start()
         before = scheduler.current["id"]
         scheduler.silent = False
-        assert await scheduler.request_world(now=10) is False
-        assert scheduler.current["id"] == before
+        assert await scheduler.request_world(now=10) is True
+        assert scheduler.current["id"] != before
+        assert scheduler.world_registry.is_fallback(scheduler.current["id"])
     asyncio.run(scenario())
-    assert len([message for message in hub.messages if message[0] == "world.current"]) == 1
+    assert len([message for message in hub.messages if message[0] == "world.current"]) == 2
 
 
 def test_returning_signature_reuses_world_without_composition():
@@ -118,9 +119,12 @@ def test_first_generated_world_replaces_fallback_even_with_similar_setting_and_m
         assert not scheduler.world_registry.is_fallback(scheduler.current["id"])
         assert scheduler.current["world"]["name"] == "The Music Kingdom"
         assert previous == [None]
-        # Once grounded in this music, repeating it should hold the generated world.
+        # Once grounded in this music, repeating it holds the generated world without asking Gemini.
         assert await scheduler.request_world(now=20) is False
-        assert previous[1]["id"] == scheduler.current["id"]
+        assert len(previous) == 1
+        # A detected song change asks Gemini without the current world, and always takes the answer.
+        assert await scheduler.request_world(now=30, song_change=True) is True
+        assert previous[1] is None
 
     asyncio.run(scenario())
 
@@ -166,4 +170,227 @@ def test_no_music_run_never_opens_microphone_and_reset_restores_kingdom(monkeypa
                 await task
             except asyncio.CancelledError:
                 pass
+    asyncio.run(scenario())
+
+
+def _composing(hub):
+    return [data for topic, data in hub.messages if topic == "world.composing"]
+
+
+def test_world_composing_reports_rendering_then_new_scene_then_kept():
+    responses = iter([world("Ocean", "open ocean"), world("Another Sea", "open ocean")])
+
+    async def compose(*_args):
+        return next(responses)
+
+    hub, scheduler = build_scheduler(compose, distance_fn=lambda _a, b: 0.8 if b.get("tempo_bpm") == 104 else 0.1)
+
+    async def scenario():
+        await scheduler.start()
+        assert _composing(hub) == []  # adopting the starting world is not music-driven
+        scheduler.silent = False
+        await scheduler.request_world(now=10)
+        await scheduler.request_world(now=15)
+    asyncio.run(scenario())
+    # The second check hears the same song, so it holds quietly: no Gemini call, nothing on screen.
+    assert _composing(hub) == [{"state": "composing"}, {"state": "done", "name": "Ocean"}]
+
+
+def test_world_composing_reports_failure_and_returning_worlds_skip_rendering():
+    async def compose(*_args):
+        raise TimeoutError("slow")
+
+    hub, scheduler = build_scheduler(compose)
+
+    async def failing():
+        await scheduler.start()
+        scheduler.silent = False
+        await scheduler.request_world(now=10)
+    asyncio.run(failing())
+    composing = _composing(hub)
+    assert composing[0] == {"state": "composing"} and composing[1]["state"] == "done"
+    assert composing[1]["name"] != "Kingdom"  # Gemini failed, so a built-in scene took over
+
+    registry = WorldRegistry({"RETURN_MATCH_THRESHOLD": 0.15}, distance=lambda _a, _b: 0.0)
+    registry.add(world("Saved Ocean", "open ocean"))
+    hub, scheduler = build_scheduler(compose, registry=registry)
+
+    async def returning():
+        await scheduler.start()
+        scheduler.silent = False
+        await scheduler.request_world(now=10)
+    asyncio.run(returning())
+    assert _composing(hub) == [{"state": "done", "name": "Saved Ocean"}]
+
+
+def test_song_change_always_renders_a_new_scene_even_when_the_music_looks_similar():
+    responses = iter([world("Ocean", "open ocean"), world("Ember Forge", "volcanic forge")])
+    calls = []
+
+    async def compose(*_args):
+        calls.append(1)
+        return next(responses)
+
+    hub, scheduler = build_scheduler(compose, distance_fn=lambda _a, b: 0.8 if b.get("tempo_bpm") == 104 else 0.1)
+
+    async def scenario():
+        await scheduler.start()
+        scheduler.silent = False
+        assert await scheduler.request_world(now=10) is True
+        assert await scheduler.request_world(now=20) is False          # timed check, same song: held
+        assert await scheduler.request_world(now=30, song_change=True) is True
+        assert scheduler.current["world"]["name"] == "Ember Forge"
+    asyncio.run(scenario())
+    assert len(calls) == 2
+    assert _composing(hub)[-1] == {"state": "done", "name": "Ember Forge"}
+
+
+def test_tick_waits_for_a_new_song_to_fill_the_clip_before_asking():
+    async def compose(*_args):
+        return world("Ember Forge", "volcanic forge")
+
+    hub, scheduler = build_scheduler(compose)
+    t = [100.0]
+    scheduler.clock = lambda: t[0]
+    seen = []
+    original = scheduler.request_world
+
+    async def spy(now=None, *, song_change=False):
+        seen.append((now, song_change))
+        return await original(now, song_change=song_change)
+    scheduler.request_world = spy
+
+    async def scenario():
+        await scheduler.start()
+        scheduler.silent = False
+        scheduler.last_call = 90.0
+        scheduler.mark_changed()            # new song at t=100
+        for now in (101.0, 103.0, 104.9):
+            await scheduler.tick(now)
+        assert seen == []                   # clip still mostly the old song
+        await scheduler.tick(105.0)
+        assert seen == [(105.0, True)]
+    asyncio.run(scenario())
+
+
+def test_show_controls_pause_music_driven_changes_and_report_state():
+    calls = []
+
+    async def compose(*_args):
+        calls.append(1)
+        return world("Ember Forge", "volcanic forge")
+
+    hub, scheduler = build_scheduler(compose)
+
+    async def scenario():
+        await scheduler.start()
+        scheduler.silent = False
+        await scheduler.set_show({"listening": False})
+        scheduler.mark_changed()
+        await scheduler.tick(100.0)
+        assert calls == [] and scheduler.change_pending is False
+        await scheduler.set_show({"listening": True, "running": False})
+        await scheduler.tick(200.0)
+        assert calls == []
+        await scheduler.set_show({"running": True})
+        await scheduler.tick(300.0)
+        assert calls == [1]
+    asyncio.run(scenario())
+    states = [d for t, d in hub.messages if t == "show.state"]
+    assert states[0] == {"running": True, "listening": False, "can_listen": True}
+    assert states[-1]["running"] is True and states[-1]["listening"] is True
+
+
+def test_listening_is_never_on_without_a_microphone():
+    async def compose(*_args):
+        return None
+
+    hub, scheduler = build_scheduler(compose)
+    scheduler.can_listen = False
+
+    async def scenario():
+        await scheduler.set_show({"listening": True})
+    asyncio.run(scenario())
+    assert hub.messages[-1] == ("show.state", {"running": True, "listening": False, "can_listen": False})
+
+
+def test_a_scene_that_arrives_after_listening_is_turned_off_is_dropped():
+    hub, scheduler = build_scheduler(None)
+
+    async def compose(*_args):
+        await scheduler.set_show({"listening": False})  # pressed while Gemini was working
+        return world("Ember Forge", "volcanic forge")
+    scheduler.compose = compose
+
+    async def scenario():
+        await scheduler.start()
+        scheduler.silent = False
+        assert await scheduler.request_world(now=10) is False
+        assert scheduler.current["world"]["name"] == "Kingdom"
+    asyncio.run(scenario())
+
+
+def test_gemini_repeating_the_current_setting_forces_a_built_in_scene_and_never_kept():
+    responses = iter([world("Ocean", "open ocean"), world("Another Sea", "open ocean")])
+
+    async def compose(*_args):
+        return next(responses)
+
+    hub, scheduler = build_scheduler(compose, distance_fn=lambda _a, _b: 0.0)
+
+    async def scenario():
+        await scheduler.start()
+        scheduler.silent = False
+        assert await scheduler.request_world(now=10) is True
+        assert scheduler.current["world"]["name"] == "Ocean"
+        assert await scheduler.request_world(now=20, song_change=True) is True
+        assert scheduler.world_registry.is_fallback(scheduler.current["id"])
+        assert scheduler.current["world"]["name"] not in ("Ocean", "Another Sea")
+        # Same song keeps playing: the built-in scene holds instead of flipping every check.
+        assert await scheduler.request_world(now=40) is False
+    asyncio.run(scenario())
+    assert all(d["state"] != "kept" for d in _composing(hub))
+
+
+def test_forced_built_in_scenes_rotate_instead_of_repeating():
+    async def compose(*_args):
+        raise TimeoutError("quota")
+
+    hub, scheduler = build_scheduler(compose)
+    picked = []
+
+    async def scenario():
+        await scheduler.start()
+        scheduler.silent = False
+        for i in range(4):
+            assert await scheduler.request_world(now=10 + 10 * i, song_change=True) is True
+            picked.append(scheduler.current["world"]["name"])
+    asyncio.run(scenario())
+    assert len(set(picked)) == 4  # no repeats while three others are recent
+
+
+def test_silence_brings_back_the_kingdom_and_short_gaps_do_not():
+    async def compose(*_args):
+        return world("Ember Forge", "volcanic forge")
+
+    hub, scheduler = build_scheduler(compose)
+    t = [0.0]
+    scheduler.clock = lambda: t[0]
+
+    async def scenario():
+        await scheduler.start()
+        scheduler.on_audio_features({"silent": False})
+        assert await scheduler.request_world(now=1.0) is True
+        assert scheduler.current["world"]["name"] == "Ember Forge"
+        t[0] = 2.0
+        scheduler.on_audio_features({"silent": True})      # a gap between songs
+        await scheduler.tick(8.0)
+        assert scheduler.current["world"]["name"] == "Ember Forge"
+        await scheduler.tick(12.5)                          # 10.5 s of silence
+        assert scheduler.current["world"]["name"] == "Kingdom"
+        assert scheduler.music_for_current is None
+        await scheduler.set_show({"listening": False})      # listening off: the scene is left alone
+        scheduler.current = {**scheduler.current, "id": "w-other000"}
+        await scheduler.tick(30.0)
+        assert scheduler.current["id"] == "w-other000"
     asyncio.run(scenario())

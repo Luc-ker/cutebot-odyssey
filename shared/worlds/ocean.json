@@ -4,6 +4,7 @@
   "roles": [],
   "terrain": {"open_space": "open sea", "under_table": "the deep sea"},
   "restyle_prompt": "First-person, low over stormy waves at dusk, rain on the sea, wooden ships and warm lanterns, painterly fantasy.",
+  "stable_prompt": "Transform the entire view into a stormy open sea from a cinematic seafaring film, seen through a handheld camera drifting across it. Everything in view becomes part of the sea in the same place and size: tall shapes become ship masts with torn sails and lanterns, wide or boxy shapes become wooden galleons and jagged sea stacks, thin legs and poles become barnacled dock pilings, flat surfaces become rolling deep teal waves, dark gaps become foaming sea caves. The output will show wet timber and spray under a storm grey dusk sky with slanting rain and lantern gold glows, a lighthouse on a far headland, and a solid 3D world whose view pans and turns with every camera movement while the ships and rocks stay anchored, with nothing modern.",
   "narration": "The storm rolls in; welcome to the open sea.",
   "music_signature": {"tempo_bpm": 112, "energy": 0.72, "brightness": 0.48, "chroma": [0.2, 0.1, 0.05, 0.05, 0.15, 0.1, 0.05, 0.1, 0.05, 0.05, 0.05, 0.05]}
 }

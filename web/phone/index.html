@@ -8,9 +8,18 @@
   <style>
     :root { color-scheme: dark; font-family: system-ui, -apple-system, sans-serif; }
     html, body { margin: 0; height: 100%; background: #000; color: #fff; overflow: hidden; }
-    #preview { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: .35; }
+    /* The phone lies sideways on the robot. When the browser is stuck in portrait (rotation lock, or
+       Safari ignoring orientation.lock), turn the whole screen a quarter turn so it reads landscape.
+       data-flipped (the "Flip 180°" button) picks which way, matching the video turn in phone.js. */
+    #screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; height: 100dvh; }
+    @media (orientation: portrait) {
+      #screen { width: 100vh; width: 100dvh; height: 100vw; transform-origin: top left;
+                transform: rotate(90deg) translateY(-100%); }
+      :root[data-flipped="1"] #screen { transform: rotate(-90deg) translateX(-100%); }
+    }
+    #preview { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: .35; }
     main {
-      position: relative; height: 100%; height: 100dvh; display: flex; flex-direction: column;
+      position: relative; height: 100%; display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 1rem; text-align: center; padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
       box-sizing: border-box;
     }
@@ -25,34 +34,30 @@
     .row span { background: rgba(0,0,0,.6); padding: .3em .7em; border-radius: .4em; }
     #battery { font-size: 2rem; font-weight: 700; }
     #battery.low { color: #ff6060; }
-    #rotate-hint { display: none; max-width: 28rem; margin: 0; padding: .75rem 1rem;
-                   border-radius: .5rem; background: rgba(0,0,0,.8); line-height: 1.5; }
-    #rotate-hint strong { display: block; }
-    @media (orientation: portrait) {
-      #rotate-hint { display: block; }
-    }
-    @media (orientation: landscape) {
-      main { justify-content: space-between; gap: .5rem; }
-      #indicator { align-self: flex-start; font-size: clamp(1rem, 5vh, 2rem); }
-      #battery { align-self: flex-end; font-size: 1.25rem; }
-      .row { font-size: .85rem; gap: .4rem; }
-    }
+    #flip { font: inherit; color: #fff; background: rgba(0,0,0,.6); border: 1px solid rgba(255,255,255,.4);
+            padding: .3em .7em; border-radius: .4em; }
+    /* Always the landscape layout: #screen is landscape whichever way the browser thinks it is. */
+    main { justify-content: space-between; gap: .5rem; }
+    #indicator { align-self: flex-start; font-size: 2rem; }
+    #battery { align-self: flex-end; font-size: 1.25rem; }
+    .row { font-size: .85rem; gap: .4rem; }
     @media (prefers-reduced-motion: reduce) { #indicator { animation: none !important; } }
   </style>
 </head>
 <body>
-  <video id="preview" autoplay playsinline muted></video>
-  <main>
-    <div id="indicator" data-state="starting">Starting…</div>
-    <p id="rotate-hint" role="status"><strong>Turn your phone sideways for landscape</strong>
-      On iPhone, turn off Portrait Orientation Lock in Control Centre.</p>
-    <div id="battery">Battery …</div>
-    <div class="row">
-      <span id="hub">Hub …</span>
-      <span id="wake">Screen lock …</span>
-      <span id="res"></span>
-    </div>
-  </main>
+  <div id="screen">
+    <video id="preview" autoplay playsinline muted></video>
+    <main>
+      <div id="indicator" data-state="starting">Starting…</div>
+      <div id="battery">Battery …</div>
+      <div class="row">
+        <span id="hub">Hub …</span>
+        <span id="wake">Screen lock …</span>
+        <span id="res"></span>
+        <button id="flip" type="button" title="Use if the picture is upside down">Flip 180°</button>
+      </div>
+    </main>
+  </div>
   <script type="module">
     import { main } from "./phone.js";
     main();

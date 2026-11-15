@@ -56,7 +56,9 @@ function setup() {
   const timers = fakeTimers();
   mountHud(container, hub, { colourFor: (w) => localColour(w), ...timers });
   const root = container.children[0];
-  return { hub, timers, root, ahead: root.find("hud-ahead"), world: root.find("hud-world"), beat: root.find("hud-beat") };
+  const ahead = root.find("hud-ahead");
+  const aheadText = () => [ahead.find("hud-ahead-name").textContent, ahead.find("hud-ahead-role").textContent];
+  return { hub, timers, root, ahead, aheadText, world: root.find("hud-world"), beat: root.find("hud-beat") };
 }
 
 const objects = { world_id: "w-1", objects: [
@@ -68,11 +70,12 @@ test("facing id -> label shows name and role", () => {
   const k = setup();
   k.hub.emit("world.objects", objects);
   k.hub.emit("robot.state", { facing_id: 3 });
-  assert.equal(k.ahead.textContent, "Ahead: The Salt Queen (ship)");
+  assert.deepEqual(k.aheadText(), ["The Salt Queen", "ship"]);
+  assert.equal(k.ahead.find("hud-ahead-label").textContent, "ahead");
   assert.ok(k.ahead.classList.contains("visible"));
 
   k.hub.emit("robot.state", { facing_id: 9 });
-  assert.equal(k.ahead.textContent, "Ahead: The Coil (sea serpent)");
+  assert.deepEqual(k.aheadText(), ["The Coil", "sea serpent"]);
 });
 
 test("label fades 2 s after the target goes, and stays if it comes back", () => {
@@ -114,3 +117,77 @@ test("beat pops the dot", () => {
 });
 
 test("prettyRole", () => assert.equal(prettyRole("lava_beast"), "lava beast"));
+
+// --- music line: song picked up -> rendering new scene -> outcome -----------------------------
+function setupMusic() {
+  const doc = makeDoc();
+  const container = doc.createElement("div");
+  const hub = fakeHub();
+  const timers = fakeTimers();
+  let t = 0;
+  mountHud(container, hub, { colourFor: (w) => localColour(w), ...timers, now: () => t });
+  const music = container.children[0].find("hud-music");
+  const tick = (ms) => { t += ms; timers.advance(ms); };
+  const features = (silent, ms = 50) => { hub.emit("audio.features", { silent, energy: 0.5 }); tick(ms); };
+  return { hub, music, tick, features };
+}
+
+test("music line shows 'Song picked up' only after sustained music and hides after sustained quiet", () => {
+  const { music, features } = setupMusic();
+  features(false, 300);
+  features(false, 200);
+  assert.equal(music.classList.contains("visible"), false); // 500 ms: not yet
+  features(false, 200);
+  features(false);
+  assert.ok(music.classList.contains("visible") && music.classList.contains("hearing"));
+  assert.equal(music.textContent, "song picked up");
+  features(true, 1000);
+  features(true);
+  assert.ok(music.classList.contains("visible"), "a short gap keeps it up");
+  features(true, 600);
+  features(true);
+  assert.equal(music.classList.contains("visible"), false);
+});
+
+test("music line follows world.composing: rendering, then the new scene name, then back to listening", () => {
+  const { hub, music, tick, features } = setupMusic();
+  for (let i = 0; i < 15; i++) features(false);
+  hub.emit("world.composing", { state: "composing" });
+  assert.ok(music.classList.contains("composing"));
+  assert.equal(music.textContent, "rendering new scene");
+  for (let i = 0; i < 10; i++) features(false);
+  assert.ok(music.classList.contains("composing"), "listening never overrides rendering");
+  hub.emit("world.composing", { state: "done", name: "Cyber Spire Heights" });
+  assert.equal(music.textContent, "Cyber Spire Heights");
+  assert.ok(music.classList.contains("done") && !music.classList.contains("composing"));
+  for (let i = 0; i < 90; i++) features(false); // 4.5 s of music
+  assert.equal(music.textContent, "song picked up");
+});
+
+test("kept and failed outcomes show briefly; a lost result stops 'rendering' and stale features hide it", () => {
+  const { hub, music, tick } = setupMusic();
+  hub.emit("world.composing", { state: "composing" });
+  hub.emit("world.composing", { state: "kept", name: "Kingdom" });
+  assert.match(music.textContent, /scene kept/);
+  tick(2600);
+  assert.equal(music.classList.contains("visible"), false);
+  hub.emit("world.composing", { state: "failed" });
+  assert.match(music.textContent, /retrying/);
+  tick(2600);
+  hub.emit("world.composing", { state: "composing" });
+  tick(46000);
+  assert.equal(music.classList.contains("visible"), false);
+  hub.emit("audio.features", { silent: false });
+  tick(700);
+  hub.emit("audio.features", { silent: false });
+  assert.ok(music.classList.contains("visible"));
+  tick(2100); // mic/brain stopped sending features
+  assert.equal(music.classList.contains("visible"), false);
+});
+
+test("reset clears the music line", () => {
+  const { hub, music } = setupMusic();
+  hub.emit("world.composing", { state: "composing" });
+  hub.emit("system.reset", {});
+  assert.equal(music.classList.contains("visible"), false);
+});

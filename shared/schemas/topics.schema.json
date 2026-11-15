@@ -1138,6 +1138,56 @@
           "minLength": 1
         }
       }
+    },
+    "world.composing": {
+      "type": "object",
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "composing",
+            "done",
+            "kept",
+            "failed"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "show.set": {
+      "type": "object",
+      "properties": {
+        "running": {
+          "type": "boolean"
+        },
+        "listening": {
+          "type": "boolean"
+        }
+      }
+    },
+    "show.state": {
+      "type": "object",
+      "required": [
+        "running",
+        "listening",
+        "can_listen"
+      ],
+      "properties": {
+        "running": {
+          "type": "boolean"
+        },
+        "listening": {
+          "type": "boolean"
+        },
+        "can_listen": {
+          "type": "boolean"
+        }
+      }
     }
   },
   "_samples": {
@@ -1454,6 +1504,33 @@
         "data": {
           "name": "kingdom"
         }
+      },
+      {
+        "topic": "world.composing",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "state": "done",
+          "name": "Cyber Spire Heights"
+        }
+      },
+      {
+        "topic": "show.set",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "running": false
+        }
+      },
+      {
+        "topic": "show.state",
+        "ts": 1700000000.0,
+        "src": "test",
+        "data": {
+          "running": true,
+          "listening": true,
+          "can_listen": true
+        }
       }
     ],
     "invalid": [
@@ -1714,6 +1791,28 @@
           "data": {
             "mode": "hd",
             "latency_ms": 1
+          }
+        }
+      },
+      {
+        "why": "world.composing state must be a known stage",
+        "env": {
+          "topic": "world.composing",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "state": "thinking"
+          }
+        }
+      },
+      {
+        "why": "show.state needs every flag",
+        "env": {
+          "topic": "show.state",
+          "ts": 1700000000.0,
+          "src": "test",
+          "data": {
+            "running": true
           }
         }
       }

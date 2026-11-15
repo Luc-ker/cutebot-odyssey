@@ -4,6 +4,7 @@
   "roles": [],
   "terrain": {"open_space": "a field of black ash", "under_table": "a glowing lava cave"},
   "restyle_prompt": "First-person, low across a volcanic wasteland at night, ash drifts over cracked ground and lava lights the horizon, painterly fantasy.",
+  "stable_prompt": "Transform the entire view into a volcanic wasteland from a cinematic dark fantasy film, seen through a handheld camera walking through it. Everything in view becomes part of the wasteland in the same place and size: tall shapes become jagged obsidian spires with glowing cracks, wide or boxy shapes become crumbling basalt fortress ruins, thin legs and poles become charred dead trees, flat surfaces become cracked black lava plains with ember seams, dark gaps become fiery lava caves. The output will show volcanic black rock, drifting ash at night lit by a lava red glow, an erupting volcano on the far horizon, and a solid 3D world whose view pans and turns with every camera movement while the spires and ruins stay anchored, with nothing modern.",
   "narration": "The earth burns beneath your wheels.",
   "music_signature": {"tempo_bpm": 142, "energy": 0.94, "brightness": 0.3, "chroma": [0.05, 0.1, 0.05, 0.2, 0.05, 0.05, 0.2, 0.05, 0.05, 0.1, 0.05, 0.05]}
 }

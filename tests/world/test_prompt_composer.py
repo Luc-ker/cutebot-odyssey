@@ -149,3 +149,13 @@ def test_run_publishes_over_fake_hub():
 
     published = asyncio.run(scenario())
     assert published == [("video.prompt", {"prompt": compose(KINGDOM, None, False, pc.load_vocab())})]
+
+
+
+def test_built_in_scene_uses_its_full_scene_prompt_without_extras():
+    import json
+    from pathlib import Path
+    kingdom = json.loads((Path(pc.__file__).resolve().parents[2] / "shared/worlds/kingdom.json").read_text())
+    text = compose(kingdom, "castle", True, VOCAB)
+    assert text == kingdom["stable_prompt"]
+    assert "foreground" not in text and pc.TAIL not in text

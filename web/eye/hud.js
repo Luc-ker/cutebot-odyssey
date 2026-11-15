@@ -1,10 +1,29 @@
 // Robot's-eye HUD overlay (T32, whitepaper §7.2).
-// Top-left: world name tinted by the palette. Bottom-centre: "Ahead: The Salt Queen (ship)" while
+// Left edge: the world name set vertically under a seal in its palette colour. Bottom-centre:
+// "ahead — The Salt Queen  ship" while
 // the robot faces a known object, fading out 2 s after the target goes. Corner dot pops on each beat.
-// Topics (C3): world.current, world.objects, robot.state, audio.beat, system.reset.
+// Top right, beside the beat dot, a music line: "Song picked up" while music plays, "rendering new scene" while
+// Gemini composes a world from it, then the outcome for a few seconds.
+// Topics (C3): world.current, world.objects, robot.state, audio.beat, audio.features, world.composing,
+// system.reset.
 
 const HIDE_AFTER_MS = 2000;
 const POP_MS = 160;
+export const HEAR_AFTER_MS = 600;      // continuous music before "Song picked up" shows
+export const QUIET_AFTER_MS = 1500;    // continuous silence before it goes away
+const FEATURES_STALE_MS = 2000;        // no audio.features at all (mic or brain down): stop showing it
+const COMPOSING_MAX_MS = 45000;        // a lost result never leaves "rendering" up forever
+const OUTCOME_MS = { done: 4000, kept: 2500, failed: 2500 };
+
+/** Pure: the music line's text and look for a state, or null to hide it. Exported for tests. */
+export function musicLine({ hearing = false, composing = false, outcome = null } = {}) {
+  if (composing) return { text: "rendering new scene", cls: "composing" };
+  if (outcome?.state === "done") return { text: outcome.name || "new scene", cls: "done" };
+  if (outcome?.state === "kept") return { text: "same mood · scene kept", cls: "kept" };
+  if (outcome?.state === "failed") return { text: "couldn't render · retrying", cls: "failed" };
+  if (hearing) return { text: "song picked up", cls: "hearing" };
+  return null;
+}
 
 const LOCAL_COLOURS = {
   teal: [0, 128, 128], grey: [128, 128, 128], gray: [128, 128, 128], gold: [230, 180, 50],
@@ -59,8 +78,14 @@ export function mountHud(container, hub, opts = {}) {
   const root = el("hud");
   const world = el("hud-world");
   const ahead = el("hud-ahead");
+  const aheadLabel = el("hud-ahead-label");
+  const aheadName = el("hud-ahead-name");
+  const aheadRole = el("hud-ahead-role");
+  aheadLabel.textContent = "ahead";
+  ahead.append(aheadLabel, aheadName, aheadRole);
   const beat = el("hud-beat");
-  root.append(world, ahead, beat);
+  const music = el("hud-music");
+  root.append(world, ahead, beat, music);
   container.append(root);
 
   let objects = new Map();
@@ -68,14 +93,58 @@ export function mountHud(container, hub, opts = {}) {
   let hideTimer = null;
   let popTimer = null;
   let worldId = null;
+  const now = opts.now ?? (() => Date.now());
+  const ms = { hearing: false, composing: false, outcome: null };
+  let loudSince = null;
+  let lastLoud = -Infinity;
+  let staleTimer = null;
+  let composingTimer = null;
+  let outcomeTimer = null;
+
+  function drawMusic() {
+    const line = musicLine(ms);
+    for (const c of ["hearing", "composing", "done", "kept", "failed"]) music.classList.remove(c);
+    if (!line) { music.classList.remove("visible"); return; }
+    music.textContent = line.text;
+    music.classList.add("visible");
+    music.classList.add(line.cls);
+  }
+
+  function onFeatures(d = {}) {
+    const t = now();
+    if (staleTimer) clearT(staleTimer);
+    staleTimer = setT(() => { staleTimer = null; loudSince = null; ms.hearing = false; drawMusic(); }, FEATURES_STALE_MS);
+    if (!d.silent) {
+      lastLoud = t;
+      if (loudSince == null) loudSince = t;
+      if (!ms.hearing && t - loudSince >= HEAR_AFTER_MS) { ms.hearing = true; drawMusic(); }
+    } else {
+      loudSince = null;
+      if (ms.hearing && t - lastLoud >= QUIET_AFTER_MS) { ms.hearing = false; drawMusic(); }
+    }
+  }
+
+  function onComposing(d = {}) {
+    if (composingTimer) { clearT(composingTimer); composingTimer = null; }
+    if (outcomeTimer) { clearT(outcomeTimer); outcomeTimer = null; }
+    if (d.state === "composing") {
+      ms.composing = true;
+      ms.outcome = null;
+      composingTimer = setT(() => { composingTimer = null; ms.composing = false; drawMusic(); }, COMPOSING_MAX_MS);
+    } else if (OUTCOME_MS[d.state]) {
+      ms.composing = false;
+      ms.outcome = { state: d.state, name: d.name };
+      outcomeTimer = setT(() => { outcomeTimer = null; ms.outcome = null; drawMusic(); }, OUTCOME_MS[d.state]);
+    }
+    drawMusic();
+  }
 
   function showAhead() {
     const obj = facingId == null ? null : objects.get(facingId);
     if (obj && (obj.name || obj.role)) {
       if (hideTimer) { clearT(hideTimer); hideTimer = null; }
-      ahead.textContent = obj.name
-        ? `Ahead: ${obj.name}${obj.role ? ` (${prettyRole(obj.role)})` : ""}`
-        : `Ahead: ${prettyRole(obj.role)}`;
+      aheadName.textContent = obj.name || prettyRole(obj.role);
+      aheadRole.textContent = obj.name && obj.role ? prettyRole(obj.role) : "";
       ahead.classList.add("visible");
     } else if (ahead.classList.contains("visible") && !hideTimer) {
       hideTimer = setT(() => { hideTimer = null; ahead.classList.remove("visible"); }, HIDE_AFTER_MS);
@@ -97,6 +166,7 @@ export function mountHud(container, hub, opts = {}) {
     world.style.setProperty("--hud-from", `rgb(${a.join(",")})`);
     world.style.setProperty("--hud-to", `rgb(${b.join(",")})`);
     beat.style.setProperty("--hud-accent", `rgb(${c.join(",")})`);
+    music.style.setProperty("--hud-accent", `rgb(${c.join(",")})`);
   }
 
   const offs = [
@@ -118,7 +188,14 @@ export function mountHud(container, hub, opts = {}) {
       if (popTimer) clearT(popTimer);
       popTimer = setT(() => beat.classList.remove("pop"), POP_MS);
     }),
+    hub.sub("audio.features", (env) => onFeatures(env.data ?? {})),
+    hub.sub("world.composing", (env) => onComposing(env.data ?? {})),
     hub.sub("system.reset", () => {
+      for (const t of [staleTimer, composingTimer, outcomeTimer]) if (t) clearT(t);
+      staleTimer = composingTimer = outcomeTimer = null;
+      loudSince = null;
+      Object.assign(ms, { hearing: false, composing: false, outcome: null });
+      drawMusic();
       objects = new Map();
       facingId = null;
       worldId = null;
@@ -134,6 +211,7 @@ export function mountHud(container, hub, opts = {}) {
       offs.forEach((off) => typeof off === "function" && off());
       if (hideTimer) clearT(hideTimer);
       if (popTimer) clearT(popTimer);
+      for (const t of [staleTimer, composingTimer, outcomeTimer]) if (t) clearT(t);
       root.remove?.();
     },
   };

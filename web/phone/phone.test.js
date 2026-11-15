@@ -1,7 +1,7 @@
 // node --test web/phone/phone.test.js
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createPhoneStreamer, SIGNAL } from "./phone.js";
+import { createPhoneStreamer, SIGNAL, landscapeTurn, turnedSize, landscapeStream } from "./phone.js";
 
 class FakePC {
   static all = [];
@@ -108,4 +108,24 @@ test("connected reports streaming", async () => {
   const { states } = await started();
   FakePC.all[0].setState("connected");
   assert.equal(states.at(-1), "streaming");
+});
+
+test("landscapeTurn: portrait frames get a quarter turn, the way the flip says; landscape is left alone", () => {
+  assert.equal(landscapeTurn(540, 960, false), 270); // phone top edge on the left
+  assert.equal(landscapeTurn(540, 960, true), 90);   // phone top edge on the right
+  assert.equal(landscapeTurn(960, 540, false), 0);
+  assert.equal(landscapeTurn(960, 540, true), 0);    // the OS already rotated it
+  assert.equal(landscapeTurn(0, 0, true), 0);        // no frame yet
+});
+
+test("turnedSize swaps width and height for a quarter turn only", () => {
+  assert.deepEqual(turnedSize(540, 960, 270), { width: 960, height: 540 });
+  assert.deepEqual(turnedSize(540, 960, 90), { width: 960, height: 540 });
+  assert.deepEqual(turnedSize(960, 540, 0), { width: 960, height: 540 });
+});
+
+test("landscapeStream falls back to the camera stream when canvas capture is missing", () => {
+  const source = { getTracks: () => [] };
+  assert.equal(landscapeStream(source, { doc: { createElement: () => ({}) } }), source);
+  assert.equal(landscapeStream(source, { doc: undefined }), source);
 });

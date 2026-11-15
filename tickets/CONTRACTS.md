@@ -79,6 +79,7 @@ Firmware can move to MakeCode if the team prefers; the radio packets (C6) stay t
 | `audio.features` | features (T66), 20 Hz | `{rms, energy, brightness, silent: bool}` (energy, brightness 0–1) |
 | `world.current` | world scheduler (T74) | `{world: World, previous_id: str\|null}` — sent on change and every 5 s |
 | `world.transition` | transition coordinator (T95) | `{from: World\|null, to: World, started, duration_ms}` |
+| `world.composing` | world scheduler (T74) | `{state: "composing"\|"done"\|"kept"\|"failed", name?}` — music-driven composition progress for the eye HUD: `composing` once a music clip goes to Gemini, then `done` (new or returning world, `name`), `kept` (too similar, current world kept) or `failed` |
 | `world.objects` | world objects publisher (T62), 10 Hz | `{world_id, objects:[{id, cls, pos, size, visible, role, name, behaviour, cluster_id, from_sky}], clusters:[{id, pos, size, member_ids, role, name}], terrain:{open_space, under_table}}`: every object discovered and not yet forgotten; `visible` false = out of view (pos/size are where it was last seen) |
 | `robot.state` | robot state aggregator (T55), 10 Hz | `{distance_cm, override, facing_id: int\|null}` |
 | `world.event` | various (see `kind`) | `{kind, ...}` — kinds listed below |
@@ -92,6 +93,8 @@ Firmware can move to MakeCode if the team prefers; the radio packets (C6) stay t
 | `system.health` | every service, every 2 s | `{service, ok: bool, detail}` |
 | `system.reset` | reset (T63), status page (T97) | `{}` — **every stateful module clears its state when it sees this** |
 | `world.select` | status page (T97), reset (T63) | `{name}` — adopt a pre-composed fallback world by name (T74) |
+| `show.set` | eye page buttons (show / listen) | `{running?: bool, listening?: bool}` — start/stop the show (AI video and music-driven scene changes) and music listening |
+| `show.state` | world scheduler (T74) | `{running, listening, can_listen}` — sent on every `show.set` and every 5 s; `can_listen` false when there is no microphone (stable mode, music off) |
 
 `world.event` kinds:
 `object_added {id, role, name, behaviour, announce, from_sky}`, `object_removed {id}`,

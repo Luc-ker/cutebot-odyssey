@@ -4,6 +4,7 @@
   "roles": [],
   "terrain": {"open_space": "a polished marble hall", "under_table": "the candlelit catacombs"},
   "restyle_prompt": "First-person, low across polished marble in a royal court, velvet banners and candlelight glow beneath a painted vaulted ceiling, painterly fantasy.",
+  "stable_prompt": "Transform the entire view into a grand royal court from a cinematic fantasy film, seen through a handheld camera walking through it. Everything in view becomes part of the court in the same place and size: tall shapes become marble columns and candelabras, wide or boxy shapes become gilded thrones, thin legs and poles become golden banner staffs, flat surfaces become marble floors with crimson carpets, dark gaps become candlelit archways. The output will show royal purple velvet and pale gold trim in warm evening candlelight, a painted vaulted ceiling, and a solid 3D world whose view pans and turns with every camera movement while the columns and thrones stay anchored, with nothing modern.",
   "narration": "The court awaits beneath its painted vault.",
   "music_signature": {"tempo_bpm": 88, "energy": 0.38, "brightness": 0.64, "chroma": [0.15, 0.05, 0.1, 0.05, 0.15, 0.05, 0.1, 0.05, 0.05, 0.15, 0.05, 0.05]}
 }

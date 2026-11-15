@@ -15,7 +15,8 @@ def renderer_config():
             "DECART_MODEL": os.environ.get("GENRATOR_DECART_MODEL", "lucy-restyle-2"),
             # Effective (env-overridden) stable mode, so the eye page agrees with the brain.
             "STABLE_KINGDOM_ENABLED": stable.enabled(config),
-            "STABLE_KINGDOM_PROMPT": stable.prompt(config)}
+            "STABLE_KINGDOM_PROMPT": stable.prompt(config),
+            "STABLE_WORLD_NAME": stable.world_name(config)}
 
 
 def _mint(key, model, origin):
