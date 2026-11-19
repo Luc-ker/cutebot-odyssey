@@ -1,8 +1,8 @@
-# Genrator
+# Cutebot Odyssey
 
 > **Every genre generates a world.**
 
-Genrator is a palm-sized robot car you drive around a real table while watching through its eyes, and whatever
+Cutebot Odyssey is a palm-sized robot car you drive around a real table while watching through its eyes, and whatever
 music is playing decides which miniature world that table becomes. A phone mounted on an ELECFREAKS Cutebot
 streams the robot's view, and an AI video model redraws it live, first person, five centimetres off the ground.
 Gemini listens to a few seconds of the music, looks at what the robot sees, and composes a world to match: a sea
@@ -94,6 +94,6 @@ enforces both. See [docs/privacy.md](docs/privacy.md).
 
 ## AI use
 
-We used AI tools while building Genrator, as the MLH rules require us to disclose. See the
+We used AI tools while building Cutebot Odyssey, as the MLH rules require us to disclose. See the
 [AI disclosure in docs/devpost.md](docs/devpost.md#ai-use-disclosure). Inside the product, Gemini composes the
 worlds and narration, and a real-time video model restyles the robot's view.
